@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Börnis Rezepte</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#3B2A1E">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rezepte">
+<meta name="mobile-web-app-capable" content="yes">
+<script>
+  window.addEventListener('error', function (e) {
+    var box = document.getElementById('ladefehler');
+    if (!box || window.__appGestartet) return;
+    box.hidden = false;
+    box.textContent = 'Fehler beim Laden der App:\n\n' + (e.message || 'Unbekannter Fehler') +
+      '\n\nZeile: ' + (e.lineno || '-') + '\n\nBitte mach einen Screenshot von diesem Text.';
+  });
+</script>
+<style>
+  :root {
+    --bg: #FAF3E7; --surface: #FFFFFF; --ink: #2E2118; --muted: #8C7C68; --line: #EADFC9;
+    --accent: #C4622D; --accent-soft: #F9E7D8; --crust: #3B2A1E; --wheat: #E8B64C; --cream: #FFF8EE;
+    --warn: #B3401D; --warn-soft: #FBEAE2; --ok: #55804A; --ok-soft: #E9F1E4; --amber: #A9720C; --amber-soft: #FBF1DE;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --nav-h: 64px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  input, textarea { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  ::selection { background: var(--accent-soft); }
+
+  #ladefehler { white-space: pre-wrap; font-family: monospace; color: var(--warn); background: var(--warn-soft); margin: 40px 16px; padding: 20px; border-radius: 10px; }
+
+  /* Kopf */
+  .kopf { position: sticky; top: 0; z-index: 5; background: var(--crust); color: var(--cream); padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
+  .kopf-innen { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  .kopf h1 { font-family: var(--serif); font-size: 21px; margin: 0; font-weight: 600; flex: 1; }
+  .kopf .kopf-info { font-size: 12px; color: #D9C6A8; text-align: right; }
+
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(var(--nav-h) + 40px + env(safe-area-inset-bottom)); }
+  h2 { font-family: var(--serif); font-size: 26px; margin: 2px 0 12px; font-weight: 600; line-height: 1.15; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .hinweis { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+  /* Untere Leiste */
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .nav-innen { max-width: 640px; margin: 0 auto; display: flex; }
+  .nav button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: var(--nav-h); font-size: 12px; font-weight: 650; color: var(--muted); position: relative; }
+  .nav button.aktiv { color: var(--accent); }
+  .nav svg { width: 26px; height: 26px; }
+  .badge { position: absolute; top: 5px; left: calc(50% + 7px); min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; padding: 0 6px; }
+
+  /* Suche */
+  .suchfeld { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 2px solid var(--line); border-radius: 14px; padding: 0 6px 0 14px; }
+  .suchfeld:focus-within { border-color: var(--accent); }
+  .suchfeld svg { width: 22px; height: 22px; color: var(--muted); flex: none; }
+  .suchfeld input { flex: 1; border: 0; outline: 0; background: transparent; font-size: 19px; padding: 14px 0; min-width: 0; }
+  .suchfeld input::-webkit-search-cancel-button { display: none; }
+  .x-knopf { width: 40px; height: 40px; border-radius: 20px; font-size: 22px; color: var(--muted); flex: none; }
+  .x-knopf:active { background: var(--bg); }
+
+  /* Listen */
+  .liste { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .zeile { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; min-height: 62px; }
+  .zeile:active { background: var(--accent-soft); }
+  .emoji { font-size: 24px; width: 32px; text-align: center; flex: none; }
+  .txt { flex: 1; min-width: 0; }
+  .name { font-weight: 650; font-size: 17px; overflow-wrap: anywhere; }
+  .name mark { background: var(--wheat); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .pfeil { color: var(--muted); font-size: 24px; flex: none; }
+  .kat-titel { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 20px 4px 0; }
+  .leer { text-align: center; color: var(--muted); padding: 28px 12px; }
+
+  /* Karten */
+  .karte { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-top: 14px; }
+  .karte-titel { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  #verbindung-karte { scroll-margin-top: 80px; }
+  .karte p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+  .leer-karte { text-align: center; padding: 26px 18px; }
+  .leer-karte .gross { font-size: 42px; line-height: 1; margin-bottom: 8px; }
+  .leer-karte b { font-size: 18px; display: block; }
+  .leer-karte .btn-primaer { margin-top: 16px; width: 100%; }
+  .kat { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* Auswahl + Menge */
+  .auswahl { border: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(196, 98, 45, .12); }
+  .auswahl-kopf { display: flex; align-items: flex-start; gap: 10px; }
+  .auswahl-kopf h3 { font-family: var(--serif); font-size: 26px; margin: 2px 0 0; line-height: 1.15; overflow-wrap: anywhere; }
+  .btn-klein { font-size: 14px; font-weight: 650; color: var(--accent); padding: 8px 10px; border-radius: 10px; white-space: nowrap; }
+  .btn-klein:active { background: var(--accent-soft); }
+  .menge-zeile { display: flex; gap: 10px; align-items: stretch; margin-top: 14px; }
+  .kg-feld { display: flex; align-items: center; background: var(--bg); border: 2px solid var(--line); border-radius: 14px; padding: 0 14px; width: 48%; max-width: 210px; flex: none; }
+  .kg-feld:focus-within { border-color: var(--accent); background: var(--surface); }
+  .kg-feld input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 30px; font-weight: 750; padding: 10px 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .kg-feld span { font-size: 20px; font-weight: 650; color: var(--muted); margin-left: 6px; }
+  .menge-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .menge-info .label { font-weight: 700; }
+
+  .btn-primaer { background: var(--accent); color: #fff; border-radius: 14px; font-size: 19px; font-weight: 750; min-height: 60px; padding: 0 18px; }
+  .btn-primaer:active { filter: brightness(.92); }
+  .btn-primaer:disabled { opacity: .4; }
+  .menge-zeile .btn-primaer { flex: 1; }
+  .btn-zweit { background: var(--surface); color: var(--accent); border: 2px solid var(--accent); border-radius: 14px; font-size: 17px; font-weight: 700; min-height: 54px; padding: 0 16px; }
+  .btn-zweit:active { background: var(--accent-soft); }
+  .btn-zweit:disabled { opacity: .35; }
+  .btn-text { display: block; width: 100%; text-align: center; padding: 14px; font-weight: 650; color: var(--muted); }
+  .btn-text.warn { color: var(--warn); }
+  .btn-breit { width: 100%; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-weight: 650; color: var(--muted); font-size: 15px; padding: 4px 0; }
+
+  /* Zutaten-Tabelle */
+  .gruppe-titel { font-size: 12px; font-weight: 800; color: var(--amber); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 4px; }
+  .gruppe-titel:first-child { margin-top: 4px; }
+  .zutat { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .zutat b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .zutat.summe { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 2px; font-weight: 700; }
+  .vs-tag { font-size: 11px; font-weight: 700; color: var(--amber); background: var(--amber-soft); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; white-space: nowrap; }
+
+  /* Arbeitsübersicht */
+  .tag-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .tag-kopf h2 { margin-bottom: 0; }
+  #arbeit-zusammenfassung { margin: 2px 0 14px; }
+  .auftrag { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 12px 12px; min-height: 76px; }
+  .auftrag:active { background: var(--accent-soft); }
+  .auftrag-kg { flex: none; min-width: 78px; text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 11px; padding: 9px 6px; font-weight: 800; font-size: 23px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .auftrag-kg small { display: block; font-size: 12px; font-weight: 700; margin-top: 4px; }
+  .auftrag.fertig { background: #FCFAF6; }
+  .auftrag.fertig .auftrag-kg { background: var(--ok-soft); color: var(--ok); }
+  .auftrag.fertig .name { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(140, 124, 104, .5); }
+  .auftrag.neu { animation: aufleuchten 1.6s ease-out; }
+  @keyframes aufleuchten { 0%, 30% { box-shadow: 0 0 0 3px var(--wheat); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .pill { display: inline-block; font-size: 12px; font-weight: 750; border-radius: 999px; padding: 4px 9px; white-space: nowrap; flex: none; }
+  .pill.laeuft { background: var(--amber-soft); color: var(--amber); }
+  .pill.fertig { background: var(--ok-soft); color: var(--ok); }
+  .pill.alt { background: var(--warn-soft); color: var(--warn); margin-left: 4px; vertical-align: 1px; }
+  .warn-text { color: var(--warn); }
+  .abschnitt-titel { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 22px 4px 0; }
+  .vs-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .vs-zeile:last-child { border-bottom: 0; }
+  .vs-menge { font-weight: 800; font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* Einstellungen */
+  .feld-label { display: block; font-size: 14px; font-weight: 650; margin: 12px 0 6px; }
+  .eingabe { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; background: var(--bg); outline: 0; }
+  .eingabe:focus { border-color: var(--accent); background: var(--surface); }
+  textarea.eingabe { min-height: 84px; font-family: monospace; font-size: 13px; resize: vertical; }
+  .status-zeile { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 15px; margin-top: 10px; }
+  .status-zeile.ok { background: var(--ok-soft); color: var(--ok); }
+  .status-zeile.warn { background: var(--warn-soft); color: var(--warn); }
+  .status-zeile.info { background: var(--amber-soft); color: var(--amber); }
+  .knopf-reihe { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .knopf-reihe > * { flex: 1; }
+  .laeuft-gerade { opacity: .6; pointer-events: none; }
+
+  /* Overlays (Rezept-Ansicht, Schritt für Schritt) */
+  .overlay { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; overscroll-behavior: contain; }
+  .overlay-kopf { background: var(--crust); color: var(--cream); padding: max(8px, env(safe-area-inset-top)) 8px 8px; flex: none; }
+  .overlay-kopf .eng { display: flex; align-items: center; gap: 6px; min-height: 44px; }
+  .kopf-btn { color: var(--cream); font-size: 17px; font-weight: 650; padding: 10px 12px; border-radius: 10px; white-space: nowrap; }
+  .kopf-btn:active { background: rgba(255, 255, 255, .12); }
+  .kopf-titel { flex: 1; min-width: 0; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+  .overlay-inhalt { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; }
+  .overlay-fuss { flex: none; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+  .eng { max-width: 640px; margin: 0 auto; width: 100%; }
+  .btn-gross { width: 100%; min-height: 68px; font-size: 22px; }
+
+  /* Schritt für Schritt */
+  .schritt-oben { flex: none; padding: 14px 16px 0; }
+  .segmente { display: flex; gap: 4px; max-width: 640px; margin: 0 auto; }
+  .segmente i { flex: 1; height: 8px; border-radius: 4px; background: var(--line); transition: background .25s; }
+  .segmente i.ok { background: var(--ok); }
+  .segmente i.jetzt { background: var(--accent); }
+  .zaehler { text-align: center; font-weight: 750; color: var(--muted); margin-top: 10px; font-size: 16px; letter-spacing: .02em; }
+  .schritt-karte { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px 20px 24px; }
+  .schritt-karte > * { max-width: 600px; }
+  .schritt-karte.rein { animation: rein .28s ease-out; }
+  .schritt-karte.rein-zurueck { animation: reinZurueck .28s ease-out; }
+  @keyframes rein { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: none; } }
+  @keyframes reinZurueck { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: none; } }
+  .zutat-gruppe { display: inline-block; background: var(--amber-soft); color: var(--amber); font-weight: 800; font-size: 14px; border-radius: 999px; padding: 6px 14px; margin-bottom: 18px; text-transform: uppercase; letter-spacing: .06em; }
+  .zutat-name { font-family: var(--serif); font-size: clamp(32px, 9.5vw, 52px); font-weight: 700; line-height: 1.1; margin-bottom: 22px; overflow-wrap: anywhere; }
+  .zutat-menge { font-size: clamp(60px, 20vw, 112px); font-weight: 800; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -1px; white-space: nowrap; }
+  .zutat-menge span { font-size: .4em; margin-left: 8px; color: var(--ink); letter-spacing: 0; }
+  .zutat-kg { margin-top: 12px; font-size: 21px; color: var(--muted); font-weight: 650; }
+  .vorstufe { margin-top: 26px; background: var(--surface); border: 1px dashed #D8C7A8; border-radius: 12px; padding: 10px 14px; font-size: 15px; color: var(--muted); }
+  .vorstufe b { color: var(--amber); }
+  .schritt-knoepfe { display: flex; gap: 10px; }
+  .schritt-knoepfe .btn-zweit { width: 104px; flex: none; min-height: 76px; }
+  .btn-weiter { flex: 1; min-height: 76px; font-size: 26px; }
+  .fertig-haken { width: 96px; height: 96px; border-radius: 48px; background: var(--ok); color: #fff; font-size: 56px; line-height: 96px; margin: 0 auto 18px; animation: plopp .4s ease-out; }
+  @keyframes plopp { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: none; opacity: 1; } }
+  .fertig-liste { width: 100%; text-align: left; margin-top: 18px; }
+  .fertig-liste .zutat span::before { content: "✓ "; color: var(--ok); font-weight: 800; }
+  .anleitung { text-align: left; background: var(--amber-soft); border-radius: 12px; padding: 12px 14px; margin-top: 14px; font-size: 15px; white-space: pre-line; }
+  .anleitung b { display: block; color: var(--amber); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+  .fertig-knoepfe { width: 100%; margin-top: 20px; }
+
+  /* Hinweis-Meldung */
+  .toast { position: fixed; left: 50%; top: calc(max(12px, env(safe-area-inset-top)) + 56px); transform: translateX(-50%) translateY(-16px); background: var(--crust); color: var(--cream); padding: 12px 18px; border-radius: 12px; font-weight: 650; opacity: 0; transition: opacity .25s, transform .25s; z-index: 50; width: max-content; max-width: calc(100% - 32px); pointer-events: none; text-align: center; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
+  .toast.an { opacity: 1; transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<div id="ladefehler" hidden></div>
+
+<header class="kopf">
+  <div class="kopf-innen">
+    <h1>Börnis Rezepte</h1>
+    <div class="kopf-info" id="kopf-info"></div>
+  </div>
+</header>
+
+<main>
+  <!-- ===== Übersicht: Rezept suchen + Menge eingeben ===== -->
+  <section id="view-uebersicht">
+    <h2>Rezept suchen</h2>
+    <div class="suchfeld">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="suche" type="search" placeholder="Name oder Anfangsbuchstaben" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Rezept suchen">
+      <button id="suche-x" class="x-knopf" aria-label="Suche löschen" hidden>×</button>
+    </div>
+
+    <div id="auswahl" class="karte auswahl" hidden>
+      <div class="auswahl-kopf">
+        <div class="txt">
+          <div class="kat" id="auswahl-kat"></div>
+          <h3 id="auswahl-name"></h3>
+        </div>
+        <button id="auswahl-zurueck" class="btn-klein">Anderes</button>
+      </div>
+      <div class="hinweis" id="auswahl-info"></div>
+      <div class="menge-zeile">
+        <label class="kg-feld"><input id="kg" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0" aria-label="Menge in kg"><span>kg</span></label>
+        <button id="bestaetigen" class="btn-primaer" disabled>Bestätigen</button>
+      </div>
+      <div class="hinweis" id="auswahl-faktor"></div>
+      <details>
+        <summary id="auswahl-zutaten-titel">Zutaten ansehen</summary>
+        <div id="auswahl-zutaten"></div>
+      </details>
+    </div>
+
+    <div id="treffer"></div>
+  </section>
+
+  <!-- ===== Arbeitsübersicht ===== -->
+  <section id="view-arbeit" hidden>
+    <div class="tag-kopf">
+      <h2>Heute</h2>
+      <div class="meta" id="arbeit-datum"></div>
+    </div>
+    <div class="meta" id="arbeit-zusammenfassung"></div>
+    <button id="arbeit-neu" class="btn-zweit btn-breit">+ Rezept hinzufügen</button>
+    <div id="arbeit-liste"></div>
+    <div id="vorstufen"></div>
+    <button id="erledigte-weg" class="btn-text" hidden>Erledigte entfernen</button>
+  </section>
+
+  <!-- ===== Einstellungen ===== -->
+  <section id="view-einst" hidden>
+    <h2>Einstellungen</h2>
+
+    <div class="karte">
+      <div class="karte-titel">Rezepte (Grundstand)</div>
+      <div id="einst-grund"></div>
+      <p>Die eingespielten Rezepte sind der Grundstand – daraus rechnet die App jede Menge aus. Änderst du ein Rezept in der Lager-App, spiel die Rezepte hier einfach neu ein.</p>
+      <button id="einspielen" class="btn-primaer btn-breit" style="margin-top:14px">Rezepte einspielen</button>
+      <div id="einspiel-ergebnis"></div>
+    </div>
+
+    <div class="karte" id="verbindung-karte">
+      <div class="karte-titel">Verbindung zur Lager-App</div>
+      <div id="verbindung-status"></div>
+      <div id="verbindung-formular">
+        <div id="uebernehmen-box" hidden>
+          <button id="uebernehmen" class="btn-zweit btn-breit" style="margin-top:12px"></button>
+        </div>
+        <label class="feld-label" for="setup-link">Link aus der Lager-App einfügen</label>
+        <textarea id="setup-link" class="eingabe" placeholder="https://…#setup=…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+        <div class="meta" style="margin-top:6px">In der Lager-App: Einstellungen → „Neues Gerät einrichten“ → Link kopieren. Der Link aus der Bestell-App geht auch.</div>
+        <details>
+          <summary>Oder Schlüssel und Speicher-Nr. von Hand eingeben</summary>
+          <label class="feld-label" for="setup-key">jsonbin-Schlüssel (X-Master-Key)</label>
+          <input id="setup-key" class="eingabe" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <label class="feld-label" for="setup-bin">Speicher-Nr. der Lager-App</label>
+          <input id="setup-bin" class="eingabe" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </details>
+        <button id="verbinden" class="btn-primaer btn-breit" style="margin-top:14px">Verbinden &amp; einspielen</button>
+      </div>
+      <button id="trennen" class="btn-text warn" hidden>Verbindung auf diesem Gerät trennen</button>
+    </div>
+
+    <div class="karte">
+      <div class="karte-titel">Gut zu wissen</div>
+      <p>Die Arbeitsübersicht wird nur auf diesem Gerät gespeichert. Erledigte Rezepte vom Vortag räumt die App beim nächsten Öffnen selbst weg.</p>
+      <p>Die App liest die Rezepte nur – in der Lager-App wird dabei nichts verändert.</p>
+      <p class="meta" id="version"></p>
+    </div>
+  </section>
+</main>
+
+<nav class="nav" aria-label="Hauptmenü">
+  <div class="nav-innen">
+    <button data-tab="uebersicht">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Übersicht
+    </button>
+    <button data-tab="arbeit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="18" rx="2.5"/><path d="M9 3.5h6v3H9z"/><path d="m8.5 12 2 2 4-4"/><path d="M8.5 17.5h7"/></svg>
+      Arbeitsübersicht
+      <span class="badge" id="badge" hidden></span>
+    </button>
+    <button data-tab="einst">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Einstellungen
+    </button>
+  </div>
+</nav>
+
+<!-- ===== Rezept aus der Arbeitsübersicht ===== -->
+<div id="detail" class="overlay" hidden>
+  <div class="overlay-kopf"><div class="eng">
+    <button class="kopf-btn" data-zurueck>‹ Arbeitsübersicht</button>
+    <div class="kopf-titel"></div>
+  </div></div>
+  <div class="overlay-inhalt"><div class="eng">
+    <div class="kat" id="detail-kat"></div>
+    <h2 id="detail-name"></h2>
+    <div id="detail-status"></div>
+    <div class="menge-zeile">
+      <label class="kg-feld"><input id="detail-kg" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Menge in kg"><span>kg</span></label>
+      <div class="menge-info"><div class="label">Menge ändern</div><div class="meta" id="detail-faktor"></div></div>
+    </div>
+    <div class="karte">
+      <div class="karte-titel">Zutaten für diese Menge</div>
+      <div id="detail-zutaten"></div>
+    </div>
+    <div id="detail-anleitung"></div>
+    <button id="entfernen" class="btn-text warn" style="margin-top:10px">Aus der Arbeitsübersicht entfernen</button>
+  </div></div>
+  <div class="overlay-fuss"><div class="eng">
+    <button id="starten" class="btn-primaer btn-gross">▶ Starten</button>
+    <button id="von-vorne" class="btn-text" hidden>Von vorne beginnen</button>
+  </div></div>
+</div>
+
+<!-- ===== Schritt für Schritt abwiegen ===== -->
+<div id="schritt" class="overlay" hidden>
+  <div class="overlay-kopf"><div class="eng">
+    <button class="kopf-btn" id="schritt-x" aria-label="Schließen">✕</button>
+    <div class="kopf-titel" id="schritt-titel"></div>
+  </div></div>
+  <div class="schritt-oben">
+    <div class="segmente" id="schritt-balken"></div>
+    <div class="zaehler" id="schritt-zaehler"></div>
+  </div>
+  <div class="schritt-karte" id="schritt-karte"></div>
+  <div class="overlay-fuss" id="schritt-fuss"><div class="eng schritt-knoepfe">
+    <button id="zurueck" class="btn-zweit">‹ Zurück</button>
+    <button id="weiter" class="btn-primaer btn-weiter">Weiter ›</button>
+  </div></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const APP_VERSION = '1.0 · 18.10.2026';
+
+// Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
+// darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
+const K = { config: 'rezeptapp_config', grund: 'rezeptapp_grundstand', arbeit: 'rezeptapp_arbeit' };
+
+const KATEGORIEN = [
+  ['Brot', '🍞'], ['Ciabatter', '🥖'], ['Gebäck', '🥯'], ['Süßes Gebäck', '🥐'], ['Kuchen', '🍰'], ['Cremen', '🍮'],
+  ['Füllungen', '🫙'], ['Fruchtmischungen', '🍇'], ['Stückdessert', '🍪'], ['Patisserie', '🍐'], ['Torten', '🎂'],
+];
+const katEmoji = (k) => (KATEGORIEN.find((x) => x[0] === k) || [0, '🧺'])[1];
+const katRang = (k) => { const i = KATEGORIEN.findIndex((x) => x[0] === k); return i < 0 ? 99 : i; };
+
+// ---------- Helfer ----------
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const neueId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function lade(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+}
+function speichere(key, wert) {
+  try { localStorage.setItem(key, JSON.stringify(wert)); return true; }
+  catch (e) { zeigeToast('Speichern auf diesem Gerät hat nicht geklappt'); return false; }
+}
+
+const nf = (min, max) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
+const nf0 = nf(0, 0), nf1 = nf(0, 1), nf2 = nf(0, 2), nf3 = nf(3, 3);
+const fmtKg = (kg) => nf2.format(kg);
+const fmtKgEingabe = (kg) => String(Math.round(kg * 1000) / 1000).replace('.', ',');
+function parseZahl(s) {
+  const t = String(s == null ? '' : s).trim().replace(/\s/g, '').replace(',', '.');
+  if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return NaN;
+  return parseFloat(t);
+}
+
+const heuteISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const fmtTagKurz = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('de-AT', { weekday: 'short', day: 'numeric', month: 'numeric' }); };
+const fmtUhr = (ts) => new Date(ts).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' });
+const fmtDatumZeit = (ts) => new Date(ts).toLocaleDateString('de-AT', { day: 'numeric', month: 'numeric', year: 'numeric' }) + ' um ' + fmtUhr(ts);
+
+// Gewicht einer Zutat in Gramm (Stück zählen nicht zum Gewicht)
+function einheitInG(e) {
+  e = String(e || 'g').toLowerCase().trim();
+  if (e === 'g' || e === 'ml') return 1;
+  if (e === 'kg' || e === 'l') return 1000;
+  return 0;
+}
+const gesamtG = (r) => r.zutaten.reduce((s, z) => s + z.menge * einheitInG(z.einheit), 0);
+function faktorFuer(r, kg) { const g = gesamtG(r); return g > 0 ? (kg * 1000) / g : 0; }
+
+// Menge hübsch: kleine Mengen mit Komma (Germ, Salz), große ganz; ab 1.000 g zusätzlich in kg
+function fmtMenge(menge, einheit) {
+  const e = String(einheit || 'g').trim();
+  const el = e.toLowerCase();
+  if (el === 'g' || el === 'ml') {
+    const zahl = menge < 1 ? nf2.format(menge) : menge < 9.95 ? nf1.format(menge) : nf0.format(Math.round(menge));
+    const gross = Math.round(menge) >= 1000 ? `${nf3.format(Math.round(menge) / 1000)} ${el === 'g' ? 'kg' : 'l'}` : '';
+    return { zahl, einheit: e, gross };
+  }
+  if (el === 'kg' || el === 'l') return { zahl: nf3.format(menge), einheit: e, gross: '' };
+  return { zahl: nf1.format(menge), einheit: e, gross: '' };
+}
+
+function gruppiere(zutaten) {
+  const g = [];
+  zutaten.forEach((z, i) => {
+    const titel = z.gruppe || '';
+    const last = g[g.length - 1];
+    if (last && last.titel === titel) last.items.push({ z, i });
+    else g.push({ titel, items: [{ z, i }] });
+  });
+  return g;
+}
+
+function zutatenTabelleHTML(r, f) {
+  const zeilen = gruppiere(r.zutaten).map((g) =>
+    (g.titel ? `<div class="gruppe-titel">${esc(g.titel)}</div>` : '') +
+    g.items.map(({ z }) => {
+      const m = fmtMenge(z.menge * f, z.einheit);
+      return `<div class="zutat"><span>${esc(z.name)}${z.vorstufe ? ' <span class="vs-tag">Vorstufe</span>' : ''}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`;
+    }).join('')
+  ).join('');
+  return zeilen + `<div class="zutat summe"><span>Gesamt</span><b>${fmtKg((gesamtG(r) * f) / 1000)} kg</b></div>`;
+}
+
+function anleitungHTML(r) {
+  let h = '';
+  if (r.anleitung) h += `<div class="anleitung"><b>Hinweis</b>${esc(r.anleitung)}</div>`;
+  if (r.backen) h += `<div class="anleitung"><b>Backen</b>${esc(r.backen)}</div>`;
+  return h;
+}
+
+let toastTimer = null;
+function zeigeToast(text) {
+  const t = $('#toast');
+  t.textContent = text;
+  t.classList.add('an');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('an'), 2600);
+}
+
+// ---------- Daten ----------
+let grund = lade(K.grund, null); // { eingespielt, rezepte: [...] }
+let arbeit = lade(K.arbeit, []);
+if (!Array.isArray(arbeit)) arbeit = [];
+const hatRezepte = () => !!(grund && Array.isArray(grund.rezepte) && grund.rezepte.length);
+const rezeptById = (id) => (hatRezepte() ? grund.rezepte.find((r) => r.id === id) : null) || null;
+function rezeptFuer(e) {
+  if (!hatRezepte()) return null;
+  return rezeptById(e.rezeptId) || grund.rezepte.find((r) => r.name.toLowerCase() === String(e.name || '').toLowerCase()) || null;
+}
+const auftrag = (id) => arbeit.find((e) => e.id === id) || null;
+const speichereArbeit = () => speichere(K.arbeit, arbeit);
+
+// Erledigtes von früheren Tagen wegräumen (Offenes bleibt stehen, damit nichts verloren geht)
+let letzterTag = heuteISO();
+function aufraeumen() {
+  const heute = heuteISO();
+  const vorher = arbeit.length;
+  arbeit = arbeit.filter((e) => !(e.status === 'fertig' && e.datum < heute));
+  if (arbeit.length !== vorher) speichereArbeit();
+  letzterTag = heute;
+}
+
+// Rezepte aus dem Lager-App-Datensatz in einen eigenen, festen Grundstand umwandeln
+function baueGrundstand(record) {
+  const mats = new Map((record.materials || []).map((m) => [m.id, m]));
+  const rezepte = (record.recipes || [])
+    .filter((r) => r && r.name && Array.isArray(r.items) && r.items.length)
+    .map((r) => ({
+      id: String(r.id || r.name),
+      name: String(r.name).trim(),
+      kategorie: r.kategorie || 'Sonstiges',
+      teiggewicht: r.teiggewicht || '',
+      stueck: Number(r.stueckProAnsatz) || 1,
+      anleitung: r.anleitung || '',
+      backen: r.backen || '',
+      zutaten: r.items
+        .map((it) => {
+          const m = mats.get(it.materialId);
+          const teile = m && m.vorteig && Array.isArray(m.vorteig.teile) && m.vorteig.teile.length
+            ? m.vorteig.teile.map((t) => ({ name: (mats.get(t.materialId) || {}).name || '?', anteil: Number(t.anteil) || 0 }))
+            : null;
+          return { name: m ? m.name : 'Unbekannte Zutat', menge: Number(it.menge) || 0, einheit: (m && m.unit) || 'g', gruppe: it.gruppe || '', vorstufe: teile };
+        })
+        .filter((z) => z.menge > 0),
+    }))
+    .filter((r) => r.zutaten.length)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return { eingespielt: Date.now(), rezepte };
+}
+
+// ---------- Verbindung zur Lager-App ----------
+function holeConfig() {
+  const c = lade(K.config, null);
+  return c && c.apiKey && c.lagerBin ? c : null;
+}
+// Ist die Lager- oder Bestell-App im selben Browser schon eingerichtet?
+function fremdeConfig() {
+  try {
+    const a = localStorage.getItem('jsonbin_apikey'), b = localStorage.getItem('jsonbin_binid');
+    if (a && b) return { apiKey: a, lagerBin: b, quelle: 'Lager-App' };
+  } catch (e) {}
+  try {
+    const c = JSON.parse(localStorage.getItem('bestellapp_config') || 'null');
+    if (c && c.apiKey && c.lagerBin) return { apiKey: c.apiKey, lagerBin: c.lagerBin, quelle: 'Bestell-App' };
+  } catch (e) {}
+  return null;
+}
+// Link der Lager-App (Schlüssel|Speicher) oder der Bestell-App (Schlüssel|Lager|Bestell)
+function parseSetup(text) {
+  const m = String(text || '').trim().match(/#setup=([^\s#]+)/);
+  if (!m) return null;
+  try {
+    const p = atob(decodeURIComponent(m[1])).split('|');
+    if (p.length >= 2 && p[0] && p[1]) return { apiKey: p[0].trim(), lagerBin: p[1].trim() };
+  } catch (e) {}
+  return null;
+}
+
+async function ladeLagerDaten(c) {
+  let res;
+  try {
+    res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(c.lagerBin)}/latest`, { headers: { 'X-Master-Key': c.apiKey }, cache: 'no-store' });
+  } catch (e) {
+    throw new Error('Keine Internetverbindung.');
+  }
+  if (res.status === 401 || res.status === 403) throw new Error('Der Schlüssel passt nicht.');
+  if (res.status === 404) throw new Error('Den Speicher der Lager-App gibt es so nicht.');
+  if (!res.ok) throw new Error(`Der Online-Speicher meldet Fehler ${res.status}.`);
+  const json = await res.json();
+  const record = json && json.record ? json.record : json;
+  if (!record || !Array.isArray(record.recipes)) throw new Error('Im Speicher sind keine Rezepte.');
+  return record;
+}
+
+let spieltEin = false;
+async function einspielen(cNeu) {
+  if (spieltEin) return;
+  const ergebnis = $('#einspiel-ergebnis');
+  let c = cNeu || holeConfig();
+  if (!c) { const f = fremdeConfig(); if (f) c = { apiKey: f.apiKey, lagerBin: f.lagerBin }; }
+  if (!c) {
+    zeigeTab('einst');
+    ergebnis.innerHTML = '<div class="status-zeile warn">Verbinde die App zuerst unten mit der Lager-App.</div>';
+    $('#verbindung-karte').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  spieltEin = true;
+  const knoepfe = [$('#einspielen'), $('#verbinden')];
+  knoepfe.forEach((b) => b.classList.add('laeuft-gerade'));
+  const alterText = $('#einspielen').textContent;
+  $('#einspielen').textContent = 'Rezepte werden geladen …';
+  ergebnis.innerHTML = '';
+  try {
+    const record = await ladeLagerDaten(c);
+    const neu = baueGrundstand(record);
+    if (!neu.rezepte.length) throw new Error('In der Lager-App sind keine Rezepte mit Zutaten.');
+    const alt = hatRezepte() ? grund.rezepte : [];
+    const altMap = new Map(alt.map((r) => [r.id, JSON.stringify(r.zutaten)]));
+    const dazu = neu.rezepte.filter((r) => !altMap.has(r.id)).length;
+    const geaendert = neu.rezepte.filter((r) => altMap.has(r.id) && altMap.get(r.id) !== JSON.stringify(r.zutaten)).length;
+    const weg = alt.filter((r) => !neu.rezepte.some((n) => n.id === r.id)).length;
+    grund = neu;
+    speichere(K.grund, grund);
+    speichere(K.config, { apiKey: c.apiKey, lagerBin: c.lagerBin });
+    $('#setup-link').value = ''; $('#setup-key').value = ''; $('#setup-bin').value = '';
+    let info = `${neu.rezepte.length} Rezepte eingespielt.`;
+    if (alt.length) {
+      const teile = [];
+      if (dazu) teile.push(`${dazu} neu`);
+      if (geaendert) teile.push(`${geaendert} geändert`);
+      if (weg) teile.push(`${weg} nicht mehr da`);
+      info += teile.length ? ` (${teile.join(', ')})` : ' Alles war schon am neuesten Stand.';
+    }
+    ergebnis.innerHTML = `<div class="status-zeile ok">✓ ${esc(info)}</div>`;
+    zeigeToast(`✓ ${neu.rezepte.length} Rezepte eingespielt`);
+    renderAlles();
+  } catch (err) {
+    ergebnis.innerHTML = `<div class="status-zeile warn">Einspielen hat nicht geklappt: ${esc(err.message)}</div>`;
+  } finally {
+    spieltEin = false;
+    knoepfe.forEach((b) => b.classList.remove('laeuft-gerade'));
+    $('#einspielen').textContent = alterText;
+    renderEinst();
+  }
+}
+
+// ---------- Ansichten (Tabs) ----------
+let tab = 'uebersicht';
+function zeigeTab(t) {
+  tab = t;
+  ['uebersicht', 'arbeit', 'einst'].forEach((v) => { $('#view-' + v).hidden = v !== t; });
+  document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('aktiv', b.dataset.tab === t));
+  if (t === 'einst') renderEinst();
+  if (t === 'arbeit') renderArbeit();
+  window.scrollTo(0, 0);
+}
+
+function renderKopf() {
+  $('#kopf-info').textContent = hatRezepte() ? `${grund.rezepte.length} Rezepte` : '';
+}
+function renderBadge() {
+  const offen = arbeit.filter((e) => e.status !== 'fertig').length;
+  const b = $('#badge');
+  b.hidden = !offen;
+  b.textContent = offen;
+}
+
+// ---------- Übersicht: suchen, auswählen, kg eingeben ----------
+const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+function suche(q) {
+  const nq = norm(q);
+  if (!nq) return null;
+  const tokens = nq.split(' ');
+  const kompakt = nq.replace(/ /g, '');
+  const treffer = [];
+  for (const r of grund.rezepte) {
+    const n = norm(r.name);
+    const woerter = n.split(' ');
+    const initialen = woerter.map((w) => w[0]).join('');
+    let rang;
+    if (n.startsWith(nq)) rang = 0;
+    else if (tokens.every((t) => woerter.some((w) => w.startsWith(t)))) rang = 1;
+    else if (tokens.every((t) => n.includes(t))) rang = 2;
+    else if (kompakt.length >= 2 && initialen.startsWith(kompakt)) rang = 3;
+    else continue;
+    treffer.push({ r, rang });
+  }
+  treffer.sort((a, b) => a.rang - b.rang || a.r.name.localeCompare(b.r.name, 'de'));
+  return treffer.map((x) => x.r);
+}
+
+function markiere(name, q) {
+  const t = String(q || '').trim();
+  if (!t) return esc(name);
+  const i = name.toLowerCase().indexOf(t.toLowerCase());
+  if (i < 0) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + t.length)) + '</mark>' + esc(name.slice(i + t.length));
+}
+
+function rezeptZeileHTML(r, q) {
+  const g = gesamtG(r);
+  const info = [r.kategorie, g > 0 ? `Grundrezept ${fmtKg(g / 1000)} kg` : ''].filter(Boolean).join(' · ');
+  return `<button class="zeile" data-rezept="${esc(r.id)}">
+    <span class="emoji">${katEmoji(r.kategorie)}</span>
+    <span class="txt"><span class="name">${markiere(r.name, q)}</span><br><span class="meta">${esc(info)}</span></span>
+    <span class="pfeil">›</span></button>`;
+}
+
+let auswahlId = null;
+
+function renderTreffer() {
+  const box = $('#treffer');
+  if (!hatRezepte()) {
+    box.innerHTML = `<div class="karte leer-karte">
+      <div class="gross">📖</div>
+      <b>Noch keine Rezepte eingespielt</b>
+      <p>Spiel einmal deine Rezepte aus der Lager-App ein – sie sind dann der Grundstand für alle Mengen.</p>
+      <button class="btn-primaer" data-aktion="einspielen">Rezepte einspielen</button>
+    </div>`;
+    return;
+  }
+  if (auswahlId) { box.innerHTML = ''; return; }
+  const q = $('#suche').value;
+  const liste = suche(q);
+  if (liste === null) {
+    const nachKat = new Map();
+    grund.rezepte.forEach((r) => { if (!nachKat.has(r.kategorie)) nachKat.set(r.kategorie, []); nachKat.get(r.kategorie).push(r); });
+    const kats = [...nachKat.keys()].sort((a, b) => katRang(a) - katRang(b) || a.localeCompare(b, 'de'));
+    box.innerHTML = `<div class="hinweis">Tipp den Namen oder die Anfangsbuchstaben ein – oder wähl unten aus allen ${grund.rezepte.length} Rezepten.</div>` +
+      kats.map((k) => `<div class="kat-titel">${katEmoji(k)} ${esc(k)}</div><div class="liste">${nachKat.get(k).map((r) => rezeptZeileHTML(r, '')).join('')}</div>`).join('');
+  } else if (!liste.length) {
+    box.innerHTML = `<div class="leer">Kein Rezept gefunden für „${esc(q.trim())}“.</div>`;
+  } else {
+    box.innerHTML = `<div class="liste">${liste.map((r) => rezeptZeileHTML(r, q)).join('')}</div>`;
+  }
+}
+
+function renderAuswahl() {
+  const box = $('#auswahl');
+  const r = auswahlId && rezeptById(auswahlId);
+  if (!r) { box.hidden = true; return; }
+  box.hidden = false;
+  $('#auswahl-kat').textContent = `${katEmoji(r.kategorie)} ${r.kategorie}`;
+  $('#auswahl-name').textContent = r.name;
+  const g = gesamtG(r);
+  const info = [`Grundrezept: ${fmtKg(g / 1000)} kg`];
+  if (r.teiggewicht) info.push(`Teiggewicht ${r.teiggewicht}`);
+  $('#auswahl-info').innerHTML = info.map((t) => `<span style="white-space:nowrap">${esc(t)}</span>`).join(' · ');
+  aktualisiereFaktor();
+}
+
+function aktualisiereFaktor() {
+  const r = rezeptById(auswahlId);
+  const kg = parseZahl($('#kg').value);
+  const ok = !!r && kg > 0 && kg <= 1000 && gesamtG(r) > 0;
+  if (r) {
+    $('#auswahl-zutaten-titel').textContent = ok ? `Zutaten für ${fmtKg(kg)} kg ansehen` : 'Zutaten im Grundrezept ansehen';
+    $('#auswahl-zutaten').innerHTML = zutatenTabelleHTML(r, ok ? faktorFuer(r, kg) : 1);
+  }
+  $('#bestaetigen').disabled = !ok;
+  if (r && gesamtG(r) <= 0) $('#auswahl-faktor').textContent = 'Dieses Rezept hat kein Gewicht – bitte in der Lager-App prüfen.';
+  else if (ok) $('#auswahl-faktor').textContent = `= ${nf2.format(faktorFuer(r, kg))} × Grundrezept`;
+  else if ($('#kg').value.trim()) $('#auswahl-faktor').textContent = 'Bitte eine Zahl eingeben, z. B. 2,5';
+  else $('#auswahl-faktor').textContent = 'Wie viele kg brauchst du?';
+}
+
+function waehle(id) {
+  const r = rezeptById(id);
+  if (!r) return;
+  auswahlId = id;
+  $('#suche').value = r.name;
+  $('#suche-x').hidden = false;
+  $('#kg').value = '';
+  renderAuswahl();
+  renderTreffer();
+  window.scrollTo(0, 0);
+  $('#kg').focus();
+}
+
+function auswahlAufheben(fokus) {
+  auswahlId = null;
+  $('#suche').value = '';
+  $('#suche-x').hidden = true;
+  renderAuswahl();
+  renderTreffer();
+  if (fokus) $('#suche').focus();
+}
+
+let neuId = null;
+function bestaetigen() {
+  const r = rezeptById(auswahlId);
+  const kg = parseZahl($('#kg').value);
+  if (!r || !(kg > 0) || kg > 1000) return;
+  const e = { id: neueId(), rezeptId: r.id, name: r.name, kg, datum: heuteISO(), erstellt: Date.now(), status: 'offen', schritt: 0 };
+  arbeit.push(e);
+  speichereArbeit();
+  neuId = e.id;
+  $('#kg').blur();
+  auswahlAufheben(false);
+  renderBadge();
+  zeigeTab('arbeit');
+  zeigeToast(`${r.name} · ${fmtKg(kg)} kg ist in der Arbeitsübersicht`);
+  setTimeout(() => { neuId = null; }, 2000);
+}
+
+// ---------- Arbeitsübersicht ----------
+function auftragHTML(e, heute) {
+  const r = rezeptFuer(e);
+  const n = r ? r.zutaten.length : 0;
+  let status = '<span class="pfeil">›</span>';
+  if (e.status === 'fertig') status = `<span class="pill fertig">✓ ${e.fertigUm ? fmtUhr(e.fertigUm) : 'fertig'}</span>`;
+  else if (r && e.status === 'laeuft') status = `<span class="pill laeuft">Zutat ${Math.min(e.schritt, n - 1) + 1}/${n}</span>`;
+  const alt = e.datum !== heute ? `<span class="pill alt">von ${esc(fmtTagKurz(e.datum))}</span>` : '';
+  const meta = r ? `${n} Zutaten · ${nf2.format(faktorFuer(r, e.kg))} × Grundrezept` : '<span class="warn-text">Rezept fehlt im Grundstand</span>';
+  return `<button class="auftrag${e.status === 'fertig' ? ' fertig' : ''}${e.id === neuId ? ' neu' : ''}" data-auftrag="${esc(e.id)}">
+    <span class="auftrag-kg">${fmtKg(e.kg)}<small>kg</small></span>
+    <span class="txt"><span class="name">${esc(r ? r.name : e.name)}</span><br><span class="meta">${meta}</span>${alt}</span>
+    ${status}</button>`;
+}
+
+function vorstufenHTML() {
+  const summe = new Map();
+  arbeit.forEach((e) => {
+    if (e.status === 'fertig') return;
+    const r = rezeptFuer(e);
+    if (!r) return;
+    const f = faktorFuer(r, e.kg);
+    r.zutaten.forEach((z) => {
+      if (!z.vorstufe) return;
+      const s = summe.get(z.name) || { menge: 0, einheit: z.einheit, teile: z.vorstufe };
+      s.menge += z.menge * f;
+      summe.set(z.name, s);
+    });
+  });
+  if (!summe.size) return '';
+  const zeilen = [...summe.entries()].sort((a, b) => a[0].localeCompare(b[0], 'de')).map(([name, s]) => {
+    const m = fmtMenge(s.menge, s.einheit);
+    const teile = s.teile.filter((t) => t.anteil > 0).map((t) => `${fmtMenge(s.menge * t.anteil, s.einheit).zahl} ${esc(s.einheit)} ${esc(t.name)}`).join(' + ');
+    return `<div class="vs-zeile"><div><b>${esc(name)}</b>${teile ? `<div class="meta">${teile}</div>` : ''}</div><div class="vs-menge">${m.zahl} ${esc(m.einheit)}</div></div>`;
+  }).join('');
+  return `<div class="abschnitt-titel">Vorstufen für alle offenen Rezepte</div><div class="karte" style="margin-top:8px;padding-top:6px;padding-bottom:6px">${zeilen}</div>`;
+}
+
+function renderArbeit() {
+  const heute = heuteISO();
+  $('#arbeit-datum').textContent = new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const offen = arbeit.filter((e) => e.status !== 'fertig');
+  const fertig = arbeit.filter((e) => e.status === 'fertig');
+  $('#arbeit-zusammenfassung').textContent = arbeit.length
+    ? [offen.length ? `${offen.length} offen` : 'Alles erledigt 🎉', fertig.length ? `${fertig.length} fertig` : ''].filter(Boolean).join(' · ')
+    : '';
+  const liste = $('#arbeit-liste');
+  if (!arbeit.length) {
+    liste.innerHTML = `<div class="karte leer-karte">
+      <div class="gross">🧾</div>
+      <b>Noch nichts für heute</b>
+      <p>Tippe auf „Rezept hinzufügen“ oder unten auf <b style="display:inline;font-size:inherit">Übersicht</b>, such dein Rezept und gib die kg ein.</p>
+    </div>`;
+  } else {
+    const sortiert = [...offen].sort((a, b) => a.erstellt - b.erstellt).concat([...fertig].sort((a, b) => (a.fertigUm || 0) - (b.fertigUm || 0)));
+    liste.innerHTML = `<div class="liste" style="margin-top:14px">${sortiert.map((e) => auftragHTML(e, heute)).join('')}</div>`;
+  }
+  $('#vorstufen').innerHTML = vorstufenHTML();
+  $('#erledigte-weg').hidden = !fertig.length;
+  renderBadge();
+}
+
+// ---------- Rezept aus der Arbeitsübersicht (mit Starten) ----------
+let detailId = null;
+
+function oeffneDetail(id) {
+  const e = auftrag(id);
+  if (!e) return;
+  detailId = id;
+  $('#detail-kg').value = fmtKgEingabe(e.kg);
+  renderDetail();
+  zeigeOverlay($('#detail'));
+  $('#detail .overlay-inhalt').scrollTop = 0;
+}
+
+function renderDetail() {
+  const e = auftrag(detailId);
+  if (!e) return;
+  const r = rezeptFuer(e);
+  $('#detail-kat').textContent = r ? `${katEmoji(r.kategorie)} ${r.kategorie}` : '';
+  $('#detail-name').textContent = r ? r.name : e.name;
+  const eingabe = parseZahl($('#detail-kg').value);
+  const kg = eingabe > 0 && eingabe <= 1000 ? eingabe : e.kg;
+  const n = r ? r.zutaten.length : 0;
+  let status = '';
+  if (e.status === 'fertig') status = `<div class="status-zeile ok">✓ Erledigt${e.fertigUm ? ' um ' + fmtUhr(e.fertigUm) : ''}</div>`;
+  else if (r && e.status === 'laeuft') status = `<div class="status-zeile info">Angefangen – du warst bei Zutat ${Math.min(e.schritt, n - 1) + 1} von ${n}.</div>`;
+  if (e.datum !== heuteISO() && e.status !== 'fertig') status += `<div class="status-zeile warn">Eingetragen am ${esc(fmtTagKurz(e.datum))}.</div>`;
+  $('#detail-status').innerHTML = status;
+  if (!r) {
+    $('#detail-faktor').textContent = '';
+    $('#detail-zutaten').innerHTML = '<div class="warn-text">Dieses Rezept ist nicht mehr im Grundstand. Spiel die Rezepte neu ein oder entferne den Eintrag.</div>';
+    $('#detail-anleitung').innerHTML = '';
+  } else {
+    const f = faktorFuer(r, kg);
+    $('#detail-faktor').textContent = `= ${nf2.format(f)} × Grundrezept (${fmtKg(gesamtG(r) / 1000)} kg)`;
+    $('#detail-zutaten').innerHTML = zutatenTabelleHTML(r, f);
+    $('#detail-anleitung').innerHTML = anleitungHTML(r);
+  }
+  const start = $('#starten');
+  start.disabled = !r;
+  if (e.status === 'fertig') { start.textContent = '▶ Nochmal starten'; $('#von-vorne').hidden = true; }
+  else if (r && e.status === 'laeuft') { start.textContent = `▶ Weitermachen bei Zutat ${Math.min(e.schritt, n - 1) + 1}`; $('#von-vorne').hidden = false; }
+  else { start.textContent = '▶ Starten'; $('#von-vorne').hidden = true; }
+}
+
+// kg im Rezept übernehmen (beim Verlassen des Feldes, vor dem Starten, beim Schließen)
+function detailKgUebernehmen() {
+  const e = auftrag(detailId);
+  if (!e) return;
+  const kg = parseZahl($('#detail-kg').value);
+  if (kg > 0 && kg <= 1000) {
+    if (Math.abs(kg - e.kg) > 1e-9) { e.kg = kg; speichereArbeit(); }
+  }
+  $('#detail-kg').value = fmtKgEingabe(e.kg);
+  renderDetail();
+}
+
+function entfernen() {
+  const e = auftrag(detailId);
+  if (!e) return;
+  if (!confirm(`„${e.name}“ (${fmtKg(e.kg)} kg) aus der Arbeitsübersicht entfernen?`)) return;
+  arbeit = arbeit.filter((x) => x.id !== e.id);
+  speichereArbeit();
+  schliesseOverlay();
+  renderArbeit();
+  zeigeToast('Entfernt');
+}
+
+// ---------- Schritt für Schritt ----------
+let lauf = null; // { id, ende }
+let weiterSperre = 0;
+
+function starten(vonVorne) {
+  detailKgUebernehmen();
+  const e = auftrag(detailId);
+  const r = e && rezeptFuer(e);
+  if (!r || !r.zutaten.length) return;
+  // war es schon fertig, bleibt es fertig, falls gleich wieder zugemacht wird
+  const vorher = e.status === 'fertig' ? { status: 'fertig', fertigUm: e.fertigUm } : { status: 'offen' };
+  if (vonVorne || e.status !== 'laeuft' || e.schritt >= r.zutaten.length) e.schritt = 0;
+  e.status = 'laeuft';
+  delete e.fertigUm;
+  speichereArbeit();
+  lauf = { id: e.id, ende: false, vorher };
+  weiterSperre = 0;
+  renderSchritt('rein');
+  zeigeOverlay($('#schritt'));
+  wachHalten(true);
+}
+
+function renderSchritt(anim) {
+  const e = auftrag(lauf.id);
+  const r = e && rezeptFuer(e);
+  if (!r) return;
+  const n = r.zutaten.length;
+  const f = faktorFuer(r, e.kg);
+  $('#schritt-titel').textContent = `${r.name} · ${fmtKg(e.kg)} kg`;
+  $('#schritt-balken').innerHTML = r.zutaten.map((_, i) => `<i class="${lauf.ende || i < e.schritt ? 'ok' : i === e.schritt ? 'jetzt' : ''}"></i>`).join('');
+  const karte = $('#schritt-karte');
+  if (lauf.ende) {
+    $('#schritt-zaehler').textContent = `${n} von ${n} Zutaten`;
+    $('#schritt-fuss').hidden = true;
+    const liste = r.zutaten.map((z) => { const m = fmtMenge(z.menge * f, z.einheit); return `<div class="zutat"><span>${esc(z.name)}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`; }).join('');
+    karte.innerHTML = `<div style="width:100%">
+      <div class="fertig-haken">✓</div>
+      <div class="zutat-name" style="margin-bottom:6px">Alles abgewogen!</div>
+      <div class="meta" style="font-size:16px">Alle ${n} Zutaten für ${esc(r.name)} · ${fmtKg(e.kg)} kg</div>
+      <div class="fertig-liste">${liste}</div>
+      ${anleitungHTML(r)}
+      <div class="fertig-knoepfe">
+        <button class="btn-primaer btn-gross" data-aktion="zur-arbeit">Zur Arbeitsübersicht</button>
+      </div>
+    </div>`;
+    karte.style.justifyContent = 'flex-start';
+  } else {
+    const i = Math.min(e.schritt, n - 1);
+    const z = r.zutaten[i];
+    const m = fmtMenge(z.menge * f, z.einheit);
+    $('#schritt-zaehler').textContent = `Zutat ${i + 1} von ${n}`;
+    $('#schritt-fuss').hidden = false;
+    let vs = '';
+    if (z.vorstufe) {
+      const teile = z.vorstufe.filter((t) => t.anteil > 0).map((t) => `${fmtMenge(z.menge * f * t.anteil, z.einheit).zahl} ${esc(z.einheit)} ${esc(t.name)}`).join(' + ');
+      vs = `<div class="vorstufe"><b>Vorstufe</b> – muss schon fertig sein${teile ? `<br>(${teile})` : ''}</div>`;
+    }
+    karte.innerHTML = `<div>${z.gruppe ? `<div class="zutat-gruppe">${esc(z.gruppe)}</div>` : ''}
+      <div class="zutat-name">${esc(z.name)}</div>
+      <div class="zutat-menge">${m.zahl}<span>${esc(m.einheit)}</span></div>
+      ${m.gross ? `<div class="zutat-kg">= ${m.gross}</div>` : ''}
+      ${vs}</div>`;
+    karte.style.justifyContent = '';
+    $('#weiter').textContent = i === n - 1 ? 'Fertig ✓' : 'Weiter ›';
+    $('#zurueck').disabled = i === 0;
+  }
+  karte.scrollTop = 0;
+  karte.classList.remove('rein', 'rein-zurueck');
+  void karte.offsetWidth;
+  if (anim) karte.classList.add(anim);
+}
+
+function weiter() {
+  // kurze Sperre: ein Doppeltipp darf keine Zutat überspringen
+  if (!lauf || lauf.ende || Date.now() < weiterSperre) return;
+  weiterSperre = Date.now() + 500;
+  const e = auftrag(lauf.id);
+  const r = e && rezeptFuer(e);
+  if (!r) return;
+  if (e.schritt < r.zutaten.length - 1) {
+    e.schritt++;
+    speichereArbeit();
+    renderSchritt('rein');
+  } else {
+    e.status = 'fertig';
+    e.fertigUm = Date.now();
+    e.schritt = 0;
+    speichereArbeit();
+    lauf.ende = true;
+    renderSchritt('rein');
+    renderArbeit();
+  }
+  if (navigator.vibrate) { try { navigator.vibrate(25); } catch (x) {} }
+}
+
+function zurueck() {
+  if (!lauf || lauf.ende) return;
+  const e = auftrag(lauf.id);
+  if (!e || e.schritt <= 0) return;
+  e.schritt--;
+  speichereArbeit();
+  renderSchritt('rein-zurueck');
+}
+
+// Bildschirm bleibt beim Abwiegen an
+let wakeLock = null;
+async function wachHalten(an) {
+  try {
+    if (an && 'wakeLock' in navigator) {
+      if (!wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } else if (!an && wakeLock) {
+      const w = wakeLock; wakeLock = null; await w.release();
+    }
+  } catch (e) { wakeLock = null; }
+}
+
+// ---------- Overlays mit Zurück-Taste (Android) ----------
+const overlays = [];
+function zeigeOverlay(el) {
+  el.hidden = false;
+  overlays.push(el);
+  history.pushState({ ov: overlays.length }, '');
+}
+function schliesseOverlay() { if (overlays.length) history.back(); }
+function schliesseAlle() { if (overlays.length) history.go(-overlays.length); }
+function beimSchliessen(el) {
+  if (el.id === 'schritt') {
+    const war = lauf;
+    lauf = null;
+    wachHalten(false);
+    if (war && !war.ende) {
+      const e = auftrag(war.id);
+      const r = e && rezeptFuer(e);
+      // gleich bei der ersten Zutat wieder zugemacht → gilt als nicht angefangen
+      if (e && e.status === 'laeuft' && e.schritt === 0) { Object.assign(e, war.vorher); speichereArbeit(); }
+      else if (e && r) zeigeToast(`Gemerkt: du bist bei Zutat ${e.schritt + 1} von ${r.zutaten.length}`);
+    }
+    renderArbeit();
+    if (detailId) renderDetail();
+  } else if (el.id === 'detail') {
+    detailKgUebernehmen();
+    detailId = null;
+    renderArbeit();
+  }
+}
+window.addEventListener('popstate', (ev) => {
+  const ziel = (ev.state && ev.state.ov) || 0;
+  while (overlays.length > ziel) {
+    const el = overlays.pop();
+    el.hidden = true;
+    beimSchliessen(el);
+  }
+});
+
+// ---------- Einstellungen ----------
+function renderEinst() {
+  $('#version').textContent = 'Version ' + APP_VERSION;
+  $('#einst-grund').innerHTML = hatRezepte()
+    ? `<div class="status-zeile ok">✓ ${grund.rezepte.length} Rezepte · eingespielt am ${esc(fmtDatumZeit(grund.eingespielt))}</div>`
+    : '<div class="status-zeile info">Noch keine Rezepte eingespielt.</div>';
+  if (!spieltEin) $('#einspielen').textContent = hatRezepte() ? 'Rezepte neu einspielen' : 'Rezepte einspielen';
+
+  const c = holeConfig();
+  const f = fremdeConfig();
+  if (c) {
+    $('#verbindung-status').innerHTML = `<div class="status-zeile ok">✓ Verbunden · Speicher-Nr. …${esc(String(c.lagerBin).slice(-6))}</div>`;
+    $('#verbindung-formular').hidden = true;
+    $('#trennen').hidden = false;
+  } else {
+    $('#verbindung-status').innerHTML = f
+      ? `<div class="status-zeile info">Die ${esc(f.quelle)} ist in diesem Browser schon eingerichtet – ein Tipp genügt.</div>`
+      : '<div class="status-zeile info">Noch nicht verbunden. Einmal einrichten, dann kannst du die Rezepte einspielen.</div>';
+    $('#verbindung-formular').hidden = false;
+    $('#uebernehmen-box').hidden = !f;
+    if (f) $('#uebernehmen').textContent = `Verbindung der ${f.quelle} übernehmen`;
+    $('#trennen').hidden = true;
+  }
+}
+
+function verbinden() {
+  const ausLink = parseSetup($('#setup-link').value);
+  const key = $('#setup-key').value.trim(), bin = $('#setup-bin').value.trim();
+  const c = ausLink || (key && bin ? { apiKey: key, lagerBin: bin } : null);
+  if (!c) {
+    $('#einspiel-ergebnis').innerHTML = '';
+    zeigeToast($('#setup-link').value.trim() ? 'Der Link passt nicht – bitte den ganzen Link einfügen' : 'Bitte zuerst den Link einfügen');
+    return;
+  }
+  einspielen(c);
+}
+
+function setupAusAdresse() {
+  if (!location.hash.startsWith('#setup=')) return;
+  const c = parseSetup(location.hash);
+  history.replaceState({ ov: 0 }, '', location.pathname + location.search);
+  if (!c) return;
+  const vorher = holeConfig();
+  if (vorher && vorher.lagerBin !== c.lagerBin &&
+    !confirm('Achtung: Dieser Link verbindet die App mit einem ANDEREN Online-Speicher.\n\nNur bestätigen, wenn der Link von deinem eigenen Gerät stammt. Fortfahren?')) return;
+  speichere(K.config, c);
+  if (!hatRezepte()) setTimeout(() => einspielen(c), 50);
+  else zeigeToast('Verbunden ✓');
+}
+
+// ---------- Alles zeichnen ----------
+function renderAlles() {
+  renderKopf();
+  renderAuswahl();
+  renderTreffer();
+  renderArbeit();
+  renderEinst();
+  if (detailId) renderDetail();
+}
+
+// ---------- Start ----------
+function start() {
+  history.replaceState({ ov: 0 }, '');
+  aufraeumen();
+  setupAusAdresse();
+
+  document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => {
+    const t = b.dataset.tab;
+    if (t === tab && t === 'uebersicht') {
+      if (auswahlId) auswahlAufheben(true); else $('#suche').focus();
+      return;
+    }
+    zeigeTab(t);
+  }));
+
+  const suchfeld = $('#suche');
+  suchfeld.addEventListener('input', () => {
+    if (auswahlId) { auswahlId = null; renderAuswahl(); }
+    $('#suche-x').hidden = !suchfeld.value;
+    renderTreffer();
+  });
+  suchfeld.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    ev.preventDefault();
+    if (auswahlId) { $('#kg').focus(); return; }
+    const l = suche(suchfeld.value);
+    if (l && l.length) waehle(l[0].id);
+  });
+  $('#suche-x').addEventListener('click', () => auswahlAufheben(true));
+  $('#auswahl-zurueck').addEventListener('click', () => auswahlAufheben(true));
+  $('#kg').addEventListener('input', aktualisiereFaktor);
+  $('#kg').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (!$('#bestaetigen').disabled) bestaetigen(); } });
+  $('#bestaetigen').addEventListener('click', bestaetigen);
+
+  document.addEventListener('click', (ev) => {
+    const rez = ev.target.closest('[data-rezept]');
+    if (rez) { waehle(rez.dataset.rezept); return; }
+    const auf = ev.target.closest('[data-auftrag]');
+    if (auf) { oeffneDetail(auf.dataset.auftrag); return; }
+    const akt = ev.target.closest('[data-aktion]');
+    if (!akt) return;
+    const a = akt.dataset.aktion;
+    if (a === 'einspielen') { if (holeConfig() || fremdeConfig()) einspielen(); else { zeigeTab('einst'); $('#verbindung-karte').scrollIntoView({ block: 'start' }); } }
+    else if (a === 'zur-arbeit') { schliesseAlle(); zeigeTab('arbeit'); }
+  });
+
+  $('#arbeit-neu').addEventListener('click', () => { zeigeTab('uebersicht'); auswahlAufheben(true); });
+  $('#erledigte-weg').addEventListener('click', () => {
+    arbeit = arbeit.filter((e) => e.status !== 'fertig');
+    speichereArbeit();
+    renderArbeit();
+  });
+
+  document.querySelectorAll('[data-zurueck]').forEach((b) => b.addEventListener('click', schliesseOverlay));
+  $('#detail-kg').addEventListener('input', renderDetail);
+  $('#detail-kg').addEventListener('change', detailKgUebernehmen);
+  $('#detail-kg').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
+  $('#starten').addEventListener('click', () => starten(false));
+  $('#von-vorne').addEventListener('click', () => starten(true));
+  $('#entfernen').addEventListener('click', entfernen);
+
+  $('#weiter').addEventListener('click', weiter);
+  $('#zurueck').addEventListener('click', zurueck);
+  $('#schritt-x').addEventListener('click', schliesseOverlay);
+
+  $('#einspielen').addEventListener('click', () => einspielen());
+  $('#verbinden').addEventListener('click', verbinden);
+  $('#uebernehmen').addEventListener('click', () => { const f = fremdeConfig(); if (f) einspielen({ apiKey: f.apiKey, lagerBin: f.lagerBin }); });
+  $('#trennen').addEventListener('click', () => {
+    if (!confirm('Verbindung auf diesem Gerät trennen? Die eingespielten Rezepte und die Arbeitsübersicht bleiben.')) return;
+    try { localStorage.removeItem(K.config); } catch (e) {}
+    renderEinst();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (lauf) wachHalten(true);
+    if (heuteISO() !== letzterTag) { aufraeumen(); renderArbeit(); }
+  });
+
+  renderAlles();
+  zeigeTab('uebersicht');
+  window.__appGestartet = true;
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+}
+
+start();
+</script>
+</body>
+</html>
