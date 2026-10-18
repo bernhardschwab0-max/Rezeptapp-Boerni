@@ -162,6 +162,28 @@
   .vs-knopf:active { filter: brightness(.92); }
   .vs-zeile .pill { margin-top: 6px; }
 
+  /* Temperaturen / Schüttwasser */
+  .temp-karte { margin: 4px 0 14px; padding: 12px 14px; }
+  .temp-karte summary { color: var(--ink); font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+  .temp-karte summary span { font-weight: 500; color: var(--muted); font-size: 14px; }
+  .temp-karte summary .temp-alt { color: var(--amber); font-weight: 700; }
+  .temp-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .temp-zeile { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
+  .temp-zeile small { font-weight: 500; color: var(--muted); }
+  .temp-zeile .g-feld { width: 104px; flex: none; }
+  .temp-tag { font-size: 12px; font-weight: 750; color: #2F6E9E; background: #E4F0F8; border-radius: 6px; padding: 1px 6px; vertical-align: 1px; white-space: nowrap; }
+  .temp-tag.eis { color: #3D7EA6; background: #E9F4FA; }
+  .sw-mini { color: #2F6E9E; font-weight: 650; }
+  .sw-karte { border-color: #CFE3F1; background: #F7FBFE; }
+  .sw-karte .modus button { min-width: 0; font-size: 15px; }
+  .sw-gross { font-size: 22px; margin-top: 14px; }
+  .sw-gross b { font-size: 34px; color: #2F6E9E; font-variant-numeric: tabular-nums; }
+  .sw-eis { margin-top: 6px; font-size: 16px; line-height: 1.5; }
+  .sw-warn { margin-top: 8px; background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 8px 10px; font-size: 14px; font-weight: 600; }
+  .sw-formel { margin-top: 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .temp-chip { display: inline-block; margin-top: 20px; font-size: clamp(26px, 8vw, 38px); font-weight: 800; color: #2F6E9E; background: #E4F0F8; border-radius: 16px; padding: 10px 20px; }
+  .temp-chip.eis { color: #3D7EA6; background: #E9F4FA; }
+
   /* Einstellungen */
   .feld-label { display: block; font-size: 14px; font-weight: 650; margin: 12px 0 6px; }
   .eingabe { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; background: var(--bg); outline: 0; }
@@ -275,6 +297,19 @@
       <div class="meta" id="arbeit-datum"></div>
     </div>
     <div class="meta" id="arbeit-zusammenfassung"></div>
+    <details class="karte temp-karte" id="temp-karte">
+      <summary><b>🌡️ Temperaturen</b> <span id="temp-zusammenfassung"></span></summary>
+      <div class="temp-grid">
+        <label class="temp-zeile"><span>Mehl <small id="temp-mehl-datum"></small></span><span class="g-feld"><input data-temp="mehl" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Leitungswasser</span><span class="g-feld"><input data-temp="leitung" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Sauerteig</span><span class="g-feld"><input data-temp="sauerteig" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Kochstück / Quellstück</span><span class="g-feld"><input data-temp="kochstueck" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Vorteig</span><span class="g-feld"><input data-temp="vorteig" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Kühlschrank <small>(Milch, Eier, Butter)</small></span><span class="g-feld"><input data-temp="kuehl" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+        <label class="temp-zeile"><span>Kneterwärmung <small>Spiralkneter</small></span><span class="g-feld"><input data-temp="spiral" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
+      </div>
+      <p class="meta">Hubkneter: keine Erwärmung. Teigtemperatur und Kneter stellst du im Rezept ein. Rechnung wie in der Backstube: (Teigtemperatur − Kneterwärmung) × Teile − Mehl − Mehl − übrige Teile; unter Leitungswasser-Temperatur 1 % Eis pro °C.</p>
+    </details>
     <button id="arbeit-neu" class="btn-zweit btn-breit">+ Rezept hinzufügen</button>
     <div id="arbeit-liste"></div>
     <div id="vorstufen"></div>
@@ -358,6 +393,13 @@
       <div class="menge-info"><div class="label">Menge ändern</div><div class="meta" id="detail-faktor"></div></div>
     </div>
     <div class="stueck-zeile" id="detail-stueck" hidden>à <label class="g-feld"><input id="detail-g" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Gramm pro Stück"><span>g</span></label> pro Stück</div>
+    <div class="karte sw-karte" id="detail-sw" hidden>
+      <div class="karte-titel" id="detail-sw-titel">💧 Schüttwasser-Temperatur</div>
+      <div class="stueck-zeile" style="margin-top:4px"><label class="g-feld"><input id="detail-tt" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Teigtemperatur"><span>°C</span></label> <span id="detail-tt-hinweis">Teigtemperatur</span></div>
+      <div class="modus" id="detail-kneter" style="margin-top:10px"><button data-kneter="spiral">Spiralkneter +8 °C</button><button data-kneter="hub">Hubkneter</button></div>
+      <div id="detail-sw-ergebnis"></div>
+      <button class="btn-klein" data-aktion="temperaturen" style="margin-top:6px;padding-left:0">Mehl-, Wasser- und andere Temperaturen ändern ›</button>
+    </div>
     <div class="karte">
       <div class="karte-titel">Zutaten für diese Menge</div>
       <div id="detail-zutaten"></div>
@@ -392,11 +434,11 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.1 · 18.10.2026';
+const APP_VERSION = '1.2 · 18.10.2026';
 
 // Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
 // darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
-const K = { config: 'rezeptapp_config', grund: 'rezeptapp_grundstand', arbeit: 'rezeptapp_arbeit', mengen: 'rezeptapp_mengen' };
+const K = { config: 'rezeptapp_config', grund: 'rezeptapp_grundstand', arbeit: 'rezeptapp_arbeit', mengen: 'rezeptapp_mengen', temp: 'rezeptapp_temperaturen', teig: 'rezeptapp_teig' };
 
 const KATEGORIEN = [
   ['Vorstufen', '🥣'], ['Brot', '🍞'], ['Ciabatter', '🥖'], ['Gebäck', '🥯'], ['Süßes Gebäck', '🥐'], ['Kuchen', '🍰'], ['Cremen', '🍮'],
@@ -467,15 +509,162 @@ function gruppiere(zutaten) {
   return g;
 }
 
+// ---------- Schüttwassertemperatur („Formel wie in der Backstube“) ----------
+// Wasser SOLL = (Teigtemperatur − Kneterwärmung) × Anzahl Teile − Mehl − Mehl − übrige Teile
+// Mehl zählt doppelt; Sauerteig, Kochstück, Vorteig, Milch, Eier, Butter zählen je einmal mit ihrer Temperatur.
+// Muss das Wasser kälter sein als aus der Leitung: pro °C Unterschied 1 % der Wassermenge als Eis.
+const TEMP_STANDARD = { mehl: 20, leitung: 12, sauerteig: 28, kochstueck: 20, vorteig: 20, kuehl: 5, spiral: 8 };
+let temps = { ...TEMP_STANDARD, ...lade(K.temp, {}) };
+let teigMerker = lade(K.teig, {});
+if (!teigMerker || typeof teigMerker !== 'object') teigMerker = {};
+const TEIG_KATEGORIEN = ['Brot', 'Ciabatter', 'Gebäck', 'Süßes Gebäck'];
+const GRUPPE_NICHT_IM_TEIG = /topping|belag|bestreu|zugabe|füllung|fuellung|bestreichen|streusel|glasur/i;
+const TEIL_NAMEN = {
+  sauerteig: 'Sauerteig', kochstueck: 'Kochstück', vorteig: 'Vorteig', milch: 'Milch', eier: 'Eier', butter: 'Butter',
+};
+const teilTemp = (art) => (art === 'milch' || art === 'eier' || art === 'butter' ? temps.kuehl : temps[art]);
+
+function zutatArt(name) {
+  const n = String(name || '').toLowerCase().trim();
+  if (n === 'wasser') return 'wasser';
+  if (/sauerteig/.test(n)) return 'sauerteig';
+  if (/kochstück|kochstueck|quellstück|quellstueck/.test(n)) return 'kochstueck';
+  if (/vorteig/.test(n)) return 'vorteig';
+  if (/milch|obers|topfen|rahm|joghurt/.test(n)) return 'milch';
+  if (/^(eier?|vollei|dotter|eigelb|eiwei(ß|ss))$/.test(n)) return 'eier';
+  if (/butter|margarine/.test(n)) return 'butter';
+  if (/mehl|^roggen ?\d|roggenvollkorn|vollkorn|schrot/.test(n)) return 'mehl';
+  return null;
+}
+
+// Welche Teile hat der Teig, und welche Zeilen sind das Schüttwasser? (null = kein Teig mit Schüttflüssigkeit)
+function teigAnalyse(r) {
+  if (!r || r.vorstufe) return null;
+  const teigKat = TEIG_KATEGORIEN.includes(r.kategorie);
+  const arten = new Set();
+  const namen = {}; // wie der Teil in der Rechnung heißt (z. B. „Sauerrahm“ statt „Milch“)
+  const dazu = (art, name) => { arten.add(art); if (!namen[art]) namen[art] = name; };
+  const wasser = [], milch = [];
+  let hatMehl = false;
+  r.zutaten.forEach((z, i) => {
+    const g = z.gruppe || '';
+    const imTeig = teigKat ? !GRUPPE_NICHT_IM_TEIG.test(g) : /teig/i.test(g) && !/vorteig/i.test(g);
+    if (!imTeig) return;
+    // vorher hergestellte Abschnitte kommen als Ganzes in den Teig
+    if (/koch|quell/i.test(g)) { dazu('kochstueck', g); return; }
+    if (/vorteig/i.test(g)) { dazu('vorteig', g); return; }
+    const a = zutatArt(z.name);
+    if (a === 'wasser') wasser.push(i);
+    else if (a === 'mehl') hatMehl = true;
+    else if (a === 'milch') { milch.push(i); dazu('milch', z.name); }
+    else if (a) dazu(a, z.name);
+  });
+  let fluessig = 'Wasser', zeilen = wasser;
+  // ohne Wasser ist die Milch die Schüttflüssigkeit
+  if (!zeilen.length && milch.length) { fluessig = 'Milch'; zeilen = milch; arten.delete('milch'); }
+  if (!zeilen.length || !hatMehl) return null;
+  const reihenfolge = ['sauerteig', 'kochstueck', 'vorteig', 'milch', 'eier', 'butter'];
+  return { fluessig, zeilen, arten: reihenfolge.filter((a) => arten.has(a)), namen };
+}
+
+// Brotteige (Brot mit Sauerteig) 32–34 °C, alle anderen Teige 25–27 °C – vorgeschlagen wird die Mitte
+const istBrotteig = (r) => r.kategorie === 'Brot' && r.zutaten.some((z) => /sauerteig/i.test(z.name));
+function teigEinstellung(r) {
+  const m = teigMerker[r.id] || {};
+  return { tt: m.tt > 0 ? m.tt : istBrotteig(r) ? 33 : 26, kneter: m.kneter === 'hub' ? 'hub' : 'spiral' };
+}
+function merkeTeig(r, aenderung) {
+  teigMerker[r.id] = { ...teigEinstellung(r), ...aenderung };
+  speichere(K.teig, teigMerker);
+}
+
+const rund1 = (x) => Math.round(x * 10) / 10;
+function schuettwasser(r) {
+  const a = teigAnalyse(r);
+  if (!a) return null;
+  const { tt, kneter } = teigEinstellung(r);
+  const erw = kneter === 'hub' ? 0 : temps.spiral;
+  const teile = [{ name: 'Mehl', t: temps.mehl }, { name: 'Mehl', t: temps.mehl }]
+    .concat(a.arten.map((art) => ({ name: a.namen[art] || TEIL_NAMEN[art], t: teilTemp(art) })));
+  const n = teile.length + 1;
+  const soll = rund1((tt - erw) * n - teile.reduce((s, t) => s + t.t, 0));
+  const eisProzent = a.fluessig === 'Wasser' && soll < temps.leitung ? Math.min(100, rund1(temps.leitung - soll)) : 0;
+  const formel = `(${nf1.format(tt)} − ${nf1.format(erw)}) × ${n} − ${teile.map((t) => `${t.name} ${nf1.format(t.t)}`).join(' − ')} = ${nf1.format(soll)} °C`;
+  return { ...a, tt, kneter, erw, n, teile, soll, eisProzent, formel };
+}
+
+// Die Schritte zum Abwiegen: wie die Zutaten, nur das Schüttwasser bekommt seine Temperatur
+// und wird bei Bedarf in Leitungswasser + Eis aufgeteilt (eigener Schritt, damit das Eis nicht vergessen wird)
+function schritteFuer(r, f) {
+  const sw = schuettwasser(r);
+  const out = [];
+  r.zutaten.forEach((z, i) => {
+    const menge = z.menge * f;
+    if (sw && sw.zeilen.includes(i)) {
+      if (sw.eisProzent > 0) {
+        const eis = (menge * sw.eisProzent) / 100;
+        if (menge - eis > 0.05) out.push({ z, name: z.name, menge: menge - eis, art: 'kalt', temp: temps.leitung });
+        out.push({ z, name: 'Eis', menge: eis, art: 'eis' });
+      } else {
+        out.push({ z, name: z.name, menge, art: 'schuett', temp: sw.soll });
+      }
+    } else {
+      out.push({ z, name: z.name, menge });
+    }
+  });
+  return out;
+}
+
+function swKurz(sw) {
+  if (!sw) return '';
+  const icon = sw.fluessig === 'Milch' ? '🥛' : '💧';
+  return sw.eisProzent > 0 ? `${icon} ${nf1.format(temps.leitung)} °C + ${nf1.format(sw.eisProzent)} % Eis` : `${icon} ${nf1.format(sw.soll)} °C`;
+}
+
 function zutatenTabelleHTML(r, f) {
-  const zeilen = gruppiere(r.zutaten).map((g) =>
+  const schritte = schritteFuer(r, f);
+  const gruppen = [];
+  schritte.forEach((s) => {
+    const titel = s.z.gruppe || '';
+    const last = gruppen[gruppen.length - 1];
+    if (last && last.titel === titel) last.items.push(s); else gruppen.push({ titel, items: [s] });
+  });
+  const zeilen = gruppen.map((g) =>
     (g.titel ? `<div class="gruppe-titel">${esc(g.titel)}</div>` : '') +
-    g.items.map(({ z }) => {
-      const m = fmtMenge(z.menge * f, z.einheit);
-      return `<div class="zutat"><span>${esc(z.name)}${z.vorstufe ? ' <span class="vs-tag">Vorstufe</span>' : ''}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`;
+    g.items.map((s) => {
+      const m = fmtMenge(s.menge, s.z.einheit);
+      let tag = s.z.vorstufe ? ' <span class="vs-tag">Vorstufe</span>' : '';
+      if (s.art === 'schuett') tag += ` <span class="temp-tag">${nf1.format(s.temp)} °C</span>`;
+      if (s.art === 'kalt') tag += ` <span class="temp-tag">${nf1.format(s.temp)} °C</span>`;
+      if (s.art === 'eis') tag += ' <span class="temp-tag eis">statt Wasser</span>';
+      return `<div class="zutat"><span>${esc(s.name)}${tag}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`;
     }).join('')
   ).join('');
   return zeilen + `<div class="zutat summe"><span>Gesamt</span><b>${fmtKg((gesamtG(r) * f) / 1000)} kg</b></div>`;
+}
+
+// Ergebnis-Kasten (Rezept-Ansicht)
+function swErgebnisHTML(r, f) {
+  const sw = schuettwasser(r);
+  if (!sw) return '';
+  const was = sw.fluessig;
+  const menge = sw.zeilen.reduce((s, i) => s + r.zutaten[i].menge * f, 0);
+  let h = `<div class="sw-gross">${was} <small class="meta">SOLL</small> <b>${nf1.format(sw.soll).replace('-', '−')} °C</b></div>`;
+  if (sw.eisProzent > 0) {
+    const eis = (menge * sw.eisProzent) / 100;
+    h += `<div class="sw-eis">Aus der Leitung kommt es mit ${nf1.format(temps.leitung)} °C → <b>${nf1.format(sw.eisProzent)} % Eis</b>:<br>
+      <b>${fmtMenge(menge - eis, 'g').zahl} g Wasser</b> + <b>${fmtMenge(eis, 'g').zahl} g Eis</b></div>`;
+    if (sw.eisProzent >= 100) h += '<div class="sw-warn">Selbst nur mit Eis wird der Teig zu warm – Mehl und Zutaten kühler stellen oder die Teigtemperatur prüfen.</div>';
+  } else if (was === 'Wasser' && sw.soll > temps.leitung) {
+    h += `<div class="meta">Wasser auf ${nf1.format(sw.soll)} °C temperieren.</div>`;
+  }
+  if (sw.soll > 45) {
+    const kalt = sw.arten.filter((a) => a === 'milch' || a === 'eier' || a === 'butter').map((a) => TEIL_NAMEN[a]);
+    h += `<div class="sw-warn">Über 45 °C schadet der Hefe! Teigtemperatur und Kneter prüfen${kalt.length ? ` oder ${kalt.join(', ')} vorher temperieren` : ''} – und die Hefe nicht direkt mit dem heißen Wasser zusammenbringen.</div>`;
+  }
+  if (was === 'Milch' && sw.soll < temps.kuehl) h += `<div class="sw-warn">Kälter als aus dem Kühlschrank (${nf1.format(temps.kuehl)} °C) geht nicht – Mehl kühler stellen.</div>`;
+  h += `<div class="sw-formel">${esc(sw.formel)}</div>`;
+  return h;
 }
 
 function anleitungHTML(r) {
@@ -928,9 +1117,10 @@ function bestaetigen() {
 function auftragHTML(e, heute) {
   const r = rezeptFuer(e);
   const n = r ? r.zutaten.length : 0;
+  const nSchritte = r ? schritteVon(e, r).length : 0;
   let status = '<span class="pfeil">›</span>';
   if (e.status === 'fertig') status = `<span class="pill fertig">✓ ${e.fertigUm ? fmtUhr(e.fertigUm) : 'fertig'}</span>`;
-  else if (r && e.status === 'laeuft') status = `<span class="pill laeuft">Zutat ${Math.min(e.schritt, n - 1) + 1}/${n}</span>`;
+  else if (r && e.status === 'laeuft') status = `<span class="pill laeuft">Zutat ${Math.min(e.schritt, nSchritte - 1) + 1}/${nSchritte}</span>`;
   const alt = e.datum !== heute ? `<span class="pill alt">von ${esc(fmtTagKurz(e.datum))}</span>` : '';
   let meta = '<span class="warn-text">Rezept fehlt im Grundstand</span>';
   if (r) {
@@ -940,6 +1130,8 @@ function auftragHTML(e, heute) {
     teile.push(`${n} Zutaten`);
     if (!e.stueck) teile.push(`${nf2.format(faktorFuer(r, e.kg))} × Grundrezept`);
     meta = teile.join(' · ');
+    const sw = e.status !== 'fertig' && schuettwasser(r);
+    if (sw) meta += `<br><span class="sw-mini">${esc(swKurz(sw))}</span>`;
   }
   const zahl = e.stueck ? nf2.format(e.stueck) : fmtKg(e.kg);
   return `<button class="auftrag${e.status === 'fertig' ? ' fertig' : ''}${e.id === neuId ? ' neu' : ''}" data-auftrag="${esc(e.id)}">
@@ -1027,7 +1219,25 @@ function renderArbeit() {
   }
   $('#vorstufen').innerHTML = vorstufenHTML();
   $('#erledigte-weg').hidden = !fertig.length;
+  renderTemps(false);
   renderBadge();
+}
+
+// Kopfzeile der Temperaturen (die Eingabefelder selbst werden beim Tippen nicht neu gezeichnet)
+function renderTemps(felderAuch) {
+  const heute = heuteISO();
+  const braucht = arbeit.some((e) => { const r = e.status !== 'fertig' && rezeptFuer(e); return r && teigAnalyse(r); });
+  const alt = temps.mehlDatum !== heute;
+  $('#temp-zusammenfassung').innerHTML = `Mehl ${nf1.format(temps.mehl)} °C · Leitung ${nf1.format(temps.leitung)} °C` +
+    (alt && braucht ? ' · <span class="temp-alt">Mehltemperatur heute schon gemessen?</span>' : '');
+  $('#temp-mehl-datum').textContent = temps.mehlDatum ? (alt ? `(zuletzt ${fmtTagKurz(temps.mehlDatum)})` : '(heute)') : '';
+  if (felderAuch) document.querySelectorAll('[data-temp]').forEach((el) => { if (el !== document.activeElement) el.value = zahlEingabe(temps[el.dataset.temp]); });
+}
+
+function tempGeaendert() {
+  renderArbeit();
+  if (detailId) renderDetail();
+  if (auswahlId) aktualisiereFaktor();
 }
 
 // ---------- Rezept aus der Arbeitsübersicht (mit Starten) ----------
@@ -1061,7 +1271,7 @@ function renderDetail() {
   $('#detail-kat').textContent = r ? `${katEmoji(r.kategorie)} ${r.kategorie}` : '';
   $('#detail-name').textContent = r ? r.name : e.name;
   const m = detailMenge.lies();
-  const n = r ? r.zutaten.length : 0;
+  const n = r ? schritteVon(e, r).length : 0;
   let status = '';
   if (e.status === 'fertig') status = `<div class="status-zeile ok">✓ Erledigt${e.fertigUm ? ' um ' + fmtUhr(e.fertigUm) : ''}</div>`;
   else if (r && e.status === 'laeuft') status = `<div class="status-zeile info">Angefangen – du warst bei Zutat ${Math.min(e.schritt, n - 1) + 1} von ${n}.</div>`;
@@ -1077,6 +1287,18 @@ function renderDetail() {
     $('#detail-faktor').textContent = m.ok || m.leer ? mengenHinweis(r, gilt) : mengenHinweis(r, m);
     $('#detail-zutaten').innerHTML = zutatenTabelleHTML(r, faktorFuer(r, gilt.kg));
     $('#detail-anleitung').innerHTML = anleitungHTML(r);
+  }
+  // Schüttwasser-Kasten
+  const sw = r && schuettwasser(r);
+  $('#detail-sw').hidden = !sw;
+  if (sw) {
+    $('#detail-sw-titel').textContent = sw.fluessig === 'Milch' ? '🥛 Schüttmilch-Temperatur' : '💧 Schüttwasser-Temperatur';
+    if (document.activeElement !== $('#detail-tt')) $('#detail-tt').value = zahlEingabe(sw.tt);
+    $('#detail-tt-hinweis').textContent = istBrotteig(r) ? 'Teigtemperatur (Brotteig 32–34 °C)' : 'Teigtemperatur (25–27 °C)';
+    $('#detail-kneter').querySelectorAll('button').forEach((b) => b.classList.toggle('an', b.dataset.kneter === sw.kneter));
+    $('#detail-kneter [data-kneter="spiral"]').textContent = `Spiralkneter +${nf1.format(temps.spiral)} °C`;
+    const gilt = m.ok ? m.kg : e.kg;
+    $('#detail-sw-ergebnis').innerHTML = swErgebnisHTML(r, faktorFuer(r, gilt));
   }
   const start = $('#starten');
   start.disabled = !r;
@@ -1119,6 +1341,8 @@ function entfernen() {
 let lauf = null; // { id, ende }
 let weiterSperre = 0;
 
+const schritteVon = (e, r) => schritteFuer(r, faktorFuer(r, e.kg));
+
 function starten(vonVorne) {
   detailMengeUebernehmen();
   const e = auftrag(detailId);
@@ -1126,7 +1350,7 @@ function starten(vonVorne) {
   if (!r || !r.zutaten.length) return;
   // war es schon fertig, bleibt es fertig, falls gleich wieder zugemacht wird
   const vorher = e.status === 'fertig' ? { status: 'fertig', fertigUm: e.fertigUm } : { status: 'offen' };
-  if (vonVorne || e.status !== 'laeuft' || e.schritt >= r.zutaten.length) e.schritt = 0;
+  if (vonVorne || e.status !== 'laeuft' || e.schritt >= schritteVon(e, r).length) e.schritt = 0;
   e.status = 'laeuft';
   delete e.fertigUm;
   speichereArbeit();
@@ -1141,15 +1365,19 @@ function renderSchritt(anim) {
   const e = auftrag(lauf.id);
   const r = e && rezeptFuer(e);
   if (!r) return;
-  const n = r.zutaten.length;
-  const f = faktorFuer(r, e.kg);
+  const schritte = schritteVon(e, r);
+  const n = schritte.length;
   $('#schritt-titel').textContent = `${r.name} · ${mengeLang(e)}`;
-  $('#schritt-balken').innerHTML = r.zutaten.map((_, i) => `<i class="${lauf.ende || i < e.schritt ? 'ok' : i === e.schritt ? 'jetzt' : ''}"></i>`).join('');
+  $('#schritt-balken').innerHTML = schritte.map((_, i) => `<i class="${lauf.ende || i < e.schritt ? 'ok' : i === e.schritt ? 'jetzt' : ''}"></i>`).join('');
   const karte = $('#schritt-karte');
   if (lauf.ende) {
     $('#schritt-zaehler').textContent = `${n} von ${n} Zutaten`;
     $('#schritt-fuss').hidden = true;
-    const liste = r.zutaten.map((z) => { const m = fmtMenge(z.menge * f, z.einheit); return `<div class="zutat"><span>${esc(z.name)}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`; }).join('');
+    const liste = schritte.map((s) => {
+      const m = fmtMenge(s.menge, s.z.einheit);
+      const t = s.art === 'schuett' || s.art === 'kalt' ? ` <span class="temp-tag">${nf1.format(s.temp)} °C</span>` : '';
+      return `<div class="zutat"><span>${esc(s.name)}${t}</span><b>${m.zahl} ${esc(m.einheit)}</b></div>`;
+    }).join('');
     karte.innerHTML = `<div style="width:100%">
       <div class="fertig-haken">✓</div>
       <div class="zutat-name" style="margin-bottom:6px">Alles abgewogen!</div>
@@ -1163,20 +1391,25 @@ function renderSchritt(anim) {
     karte.style.justifyContent = 'flex-start';
   } else {
     const i = Math.min(e.schritt, n - 1);
-    const z = r.zutaten[i];
-    const m = fmtMenge(z.menge * f, z.einheit);
+    const s = schritte[i];
+    const z = s.z;
+    const m = fmtMenge(s.menge, z.einheit);
     $('#schritt-zaehler').textContent = `Zutat ${i + 1} von ${n}`;
     $('#schritt-fuss').hidden = false;
-    let vs = '';
+    let extra = '';
     if (z.vorstufe) {
+      const f = faktorFuer(r, e.kg);
       const teile = z.vorstufe.filter((t) => t.anteil > 0).map((t) => `${fmtMenge(z.menge * f * t.anteil, z.einheit).zahl} ${esc(z.einheit)} ${esc(t.name)}`).join(' + ');
-      vs = `<div class="vorstufe"><b>Vorstufe</b> – muss schon fertig sein${teile ? `<br>(${teile})` : ''}</div>`;
+      extra = `<div class="vorstufe"><b>Vorstufe</b> – muss schon fertig sein${teile ? `<br>(${teile})` : ''}</div>`;
     }
+    if (s.art === 'schuett') extra += `<div class="temp-chip">🌡️ ${nf1.format(s.temp)} °C</div>`;
+    if (s.art === 'kalt') extra += `<div class="temp-chip">🌡️ ${nf1.format(s.temp)} °C</div><div class="vorstufe">Kalt aus der Leitung – danach kommt noch <b>Eis</b> dazu.</div>`;
+    if (s.art === 'eis') extra += `<div class="temp-chip eis">🧊 statt Wasser</div>`;
     karte.innerHTML = `<div>${z.gruppe ? `<div class="zutat-gruppe">${esc(z.gruppe)}</div>` : ''}
-      <div class="zutat-name">${esc(z.name)}</div>
+      <div class="zutat-name">${esc(s.name)}</div>
       <div class="zutat-menge">${m.zahl}<span>${esc(m.einheit)}</span></div>
       ${m.gross ? `<div class="zutat-kg">= ${m.gross}</div>` : ''}
-      ${vs}</div>`;
+      ${extra}</div>`;
     karte.style.justifyContent = '';
     $('#weiter').textContent = i === n - 1 ? 'Fertig ✓' : 'Weiter ›';
     $('#zurueck').disabled = i === 0;
@@ -1194,7 +1427,7 @@ function weiter() {
   const e = auftrag(lauf.id);
   const r = e && rezeptFuer(e);
   if (!r) return;
-  if (e.schritt < r.zutaten.length - 1) {
+  if (e.schritt < schritteVon(e, r).length - 1) {
     e.schritt++;
     speichereArbeit();
     renderSchritt('rein');
@@ -1253,7 +1486,7 @@ function beimSchliessen(el) {
       const r = e && rezeptFuer(e);
       // gleich bei der ersten Zutat wieder zugemacht → gilt als nicht angefangen
       if (e && e.status === 'laeuft' && e.schritt === 0) { Object.assign(e, war.vorher); speichereArbeit(); }
-      else if (e && r) zeigeToast(`Gemerkt: du bist bei Zutat ${e.schritt + 1} von ${r.zutaten.length}`);
+      else if (e && r) zeigeToast(`Gemerkt: du bist bei Zutat ${e.schritt + 1} von ${schritteVon(e, r).length}`);
     }
     renderArbeit();
     if (detailId) renderDetail();
@@ -1379,6 +1612,11 @@ function start() {
     if (a === 'einspielen') { if (holeConfig() || fremdeConfig()) einspielen(); else { zeigeTab('einst'); $('#verbindung-karte').scrollIntoView({ block: 'start' }); } }
     else if (a === 'zur-arbeit') { schliesseAlle(); zeigeTab('arbeit'); }
     else if (a === 'vorstufe-dazu') vorstufeDazu(akt.dataset.vs, parseFloat(akt.dataset.kg));
+    else if (a === 'temperaturen') {
+      schliesseAlle();
+      zeigeTab('arbeit');
+      setTimeout(() => { $('#temp-karte').open = true; $('#temp-karte').scrollIntoView({ block: 'start' }); }, 80);
+    }
   });
 
   $('#arbeit-neu').addEventListener('click', () => { zeigeTab('uebersicht'); auswahlAufheben(true); });
@@ -1394,6 +1632,37 @@ function start() {
     el.addEventListener('change', detailMengeUebernehmen);
     el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
   });
+  // Temperaturen
+  document.querySelectorAll('[data-temp]').forEach((el) => {
+    el.addEventListener('input', () => {
+      const v = parseZahl(el.value);
+      if (!(v >= 0 && v <= 60)) return;
+      temps[el.dataset.temp] = v;
+      if (el.dataset.temp === 'mehl') temps.mehlDatum = heuteISO();
+      speichere(K.temp, temps);
+      tempGeaendert();
+    });
+    el.addEventListener('blur', () => renderTemps(true));
+    el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } });
+  });
+  $('#detail-tt').addEventListener('input', () => {
+    const e = auftrag(detailId), r = e && rezeptFuer(e), v = parseZahl($('#detail-tt').value);
+    if (!r || !(v >= 10 && v <= 45)) return;
+    merkeTeig(r, { tt: v });
+    renderDetail();
+    renderArbeit();
+  });
+  $('#detail-tt').addEventListener('blur', () => { if (detailId) renderDetail(); });
+  $('#detail-tt').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
+  $('#detail-kneter').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-kneter]');
+    const e = auftrag(detailId), r = e && rezeptFuer(e);
+    if (!b || !r) return;
+    merkeTeig(r, { kneter: b.dataset.kneter });
+    renderDetail();
+    renderArbeit();
+  });
+
   $('#starten').addEventListener('click', () => starten(false));
   $('#von-vorne').addEventListener('click', () => starten(true));
   $('#entfernen').addEventListener('click', entfernen);
@@ -1417,6 +1686,7 @@ function start() {
     if (heuteISO() !== letzterTag) { aufraeumen(); renderArbeit(); }
   });
 
+  renderTemps(true);
   renderAlles();
   zeigeTab('uebersicht');
   // Grundstand von vor den Vorstufen-Rezepten: einmal von selbst neu einspielen
