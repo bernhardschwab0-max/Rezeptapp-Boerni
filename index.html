@@ -103,6 +103,15 @@
   .kg-feld input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 30px; font-weight: 750; padding: 10px 0; text-align: right; font-variant-numeric: tabular-nums; }
   .kg-feld span { font-size: 20px; font-weight: 650; color: var(--muted); margin-left: 6px; }
   .menge-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .modus { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 3px; margin-top: 14px; }
+  .modus button { min-width: 88px; padding: 9px 14px; border-radius: 9px; font-weight: 700; color: var(--muted); font-size: 16px; }
+  .modus button.an { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(59, 42, 30, .18); }
+  .modus + .menge-zeile { margin-top: 10px; }
+  .stueck-zeile { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 16px; color: var(--muted); font-weight: 600; flex-wrap: wrap; }
+  .g-feld { display: flex; align-items: center; background: var(--bg); border: 2px solid var(--line); border-radius: 10px; padding: 0 10px; width: 116px; }
+  .g-feld:focus-within { border-color: var(--accent); background: var(--surface); }
+  .g-feld input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 20px; font-weight: 700; padding: 8px 0; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .g-feld span { margin-left: 4px; }
   .menge-info .label { font-weight: 700; }
 
   .btn-primaer { background: var(--accent); color: #fff; border-radius: 14px; font-size: 19px; font-weight: 750; min-height: 60px; padding: 0 18px; }
@@ -148,7 +157,10 @@
   .abschnitt-titel { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 22px 4px 0; }
   .vs-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .vs-zeile:last-child { border-bottom: 0; }
-  .vs-menge { font-weight: 800; font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .vs-menge { font-weight: 800; font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+  .vs-knopf { display: block; margin: 6px 0 0 auto; font-size: 14px; font-weight: 750; color: #fff; background: var(--accent); border-radius: 9px; padding: 7px 10px; white-space: nowrap; }
+  .vs-knopf:active { filter: brightness(.92); }
+  .vs-zeile .pill { margin-top: 6px; }
 
   /* Einstellungen */
   .feld-label { display: block; font-size: 14px; font-weight: 650; margin: 12px 0 6px; }
@@ -240,10 +252,12 @@
         <button id="auswahl-zurueck" class="btn-klein">Anderes</button>
       </div>
       <div class="hinweis" id="auswahl-info"></div>
+      <div class="modus" id="auswahl-modus"><button data-modus="kg" class="an">kg</button><button data-modus="stk">Stück</button></div>
       <div class="menge-zeile">
-        <label class="kg-feld"><input id="kg" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0" aria-label="Menge in kg"><span>kg</span></label>
+        <label class="kg-feld"><input id="auswahl-menge" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0" aria-label="Menge"><span id="auswahl-einheit">kg</span></label>
         <button id="bestaetigen" class="btn-primaer" disabled>Bestätigen</button>
       </div>
+      <div class="stueck-zeile" id="auswahl-stueck" hidden>à <label class="g-feld"><input id="auswahl-g" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Gramm pro Stück"><span>g</span></label> pro Stück</div>
       <div class="hinweis" id="auswahl-faktor"></div>
       <details>
         <summary id="auswahl-zutaten-titel">Zutaten ansehen</summary>
@@ -338,10 +352,12 @@
     <div class="kat" id="detail-kat"></div>
     <h2 id="detail-name"></h2>
     <div id="detail-status"></div>
+    <div class="modus" id="detail-modus"><button data-modus="kg" class="an">kg</button><button data-modus="stk">Stück</button></div>
     <div class="menge-zeile">
-      <label class="kg-feld"><input id="detail-kg" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Menge in kg"><span>kg</span></label>
+      <label class="kg-feld"><input id="detail-menge" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Menge"><span id="detail-einheit">kg</span></label>
       <div class="menge-info"><div class="label">Menge ändern</div><div class="meta" id="detail-faktor"></div></div>
     </div>
+    <div class="stueck-zeile" id="detail-stueck" hidden>à <label class="g-feld"><input id="detail-g" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Gramm pro Stück"><span>g</span></label> pro Stück</div>
     <div class="karte">
       <div class="karte-titel">Zutaten für diese Menge</div>
       <div id="detail-zutaten"></div>
@@ -376,14 +392,14 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.0 · 18.10.2026';
+const APP_VERSION = '1.1 · 18.10.2026';
 
 // Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
 // darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
-const K = { config: 'rezeptapp_config', grund: 'rezeptapp_grundstand', arbeit: 'rezeptapp_arbeit' };
+const K = { config: 'rezeptapp_config', grund: 'rezeptapp_grundstand', arbeit: 'rezeptapp_arbeit', mengen: 'rezeptapp_mengen' };
 
 const KATEGORIEN = [
-  ['Brot', '🍞'], ['Ciabatter', '🥖'], ['Gebäck', '🥯'], ['Süßes Gebäck', '🥐'], ['Kuchen', '🍰'], ['Cremen', '🍮'],
+  ['Vorstufen', '🥣'], ['Brot', '🍞'], ['Ciabatter', '🥖'], ['Gebäck', '🥯'], ['Süßes Gebäck', '🥐'], ['Kuchen', '🍰'], ['Cremen', '🍮'],
   ['Füllungen', '🫙'], ['Fruchtmischungen', '🍇'], ['Stückdessert', '🍪'], ['Patisserie', '🍐'], ['Torten', '🎂'],
 ];
 const katEmoji = (k) => (KATEGORIEN.find((x) => x[0] === k) || [0, '🧺'])[1];
@@ -405,7 +421,7 @@ function speichere(key, wert) {
 const nf = (min, max) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const nf0 = nf(0, 0), nf1 = nf(0, 1), nf2 = nf(0, 2), nf3 = nf(3, 3);
 const fmtKg = (kg) => nf2.format(kg);
-const fmtKgEingabe = (kg) => String(Math.round(kg * 1000) / 1000).replace('.', ',');
+const zahlEingabe = (n) => String(Math.round(n * 1000) / 1000).replace('.', ',');
 function parseZahl(s) {
   const t = String(s == null ? '' : s).trim().replace(/\s/g, '').replace(',', '.');
   if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return NaN;
@@ -502,31 +518,74 @@ function aufraeumen() {
 }
 
 // Rezepte aus dem Lager-App-Datensatz in einen eigenen, festen Grundstand umwandeln
+// Vorstufen (Sauerteig, Kochstück, Knoblauchbutter …) sind in der Lager-App Rohstoffe mit Zusammensetzung –
+// hier werden sie zu eigenen Rezepten (Grundrezept 1 kg), damit man sie auch vorbereiten kann.
+const GRUNDSTAND_VERSION = 2;
+const VORSTUFE_GRUND_G = 1000;
+const istVorstufeMat = (m) => !!(m && m.vorteig && Array.isArray(m.vorteig.teile) && m.vorteig.teile.length);
+
 function baueGrundstand(record) {
   const mats = new Map((record.materials || []).map((m) => [m.id, m]));
-  const rezepte = (record.recipes || [])
-    .filter((r) => r && r.name && Array.isArray(r.items) && r.items.length)
-    .map((r) => ({
-      id: String(r.id || r.name),
-      name: String(r.name).trim(),
-      kategorie: r.kategorie || 'Sonstiges',
-      teiggewicht: r.teiggewicht || '',
-      stueck: Number(r.stueckProAnsatz) || 1,
-      anleitung: r.anleitung || '',
-      backen: r.backen || '',
-      zutaten: r.items
-        .map((it) => {
-          const m = mats.get(it.materialId);
-          const teile = m && m.vorteig && Array.isArray(m.vorteig.teile) && m.vorteig.teile.length
-            ? m.vorteig.teile.map((t) => ({ name: (mats.get(t.materialId) || {}).name || '?', anteil: Number(t.anteil) || 0 }))
-            : null;
-          return { name: m ? m.name : 'Unbekannte Zutat', menge: Number(it.menge) || 0, einheit: (m && m.unit) || 'g', gruppe: it.gruppe || '', vorstufe: teile };
-        })
+  const recipes = (record.recipes || []).filter((r) => r && r.name && Array.isArray(r.items) && r.items.length);
+  const vsKey = (name) => norm(name); // "Kochstück D" und "Kochstück D." sind dieselbe Vorstufe
+
+  // Pro Vorstufe EIN Rezept: bei Doppelten (mit/ohne Punkt) gewinnt die, die in Rezepten verwendet wird
+  const nutzung = new Map();
+  recipes.forEach((r) => r.items.forEach((it) => nutzung.set(it.materialId, (nutzung.get(it.materialId) || 0) + 1)));
+  const rezeptNamen = new Set(recipes.map((r) => vsKey(r.name)));
+  const vsGewinner = new Map(); // key -> Material
+  (record.materials || []).filter(istVorstufeMat).forEach((m) => {
+    const key = vsKey(m.name);
+    const bisher = vsGewinner.get(key);
+    if (!bisher || (nutzung.get(m.id) || 0) > (nutzung.get(bisher.id) || 0)) vsGewinner.set(key, m);
+  });
+  const vsIdFuer = (m) => {
+    const key = vsKey(m.name);
+    if (rezeptNamen.has(key)) { const r = recipes.find((x) => vsKey(x.name) === key); return String(r.id || r.name); }
+    const g = vsGewinner.get(key);
+    return g ? 'vs:' + g.id : null;
+  };
+
+  const zutatAus = (m, menge, gruppe) => ({
+    name: m ? m.name : 'Unbekannte Zutat',
+    menge: Number(menge) || 0,
+    einheit: (m && m.unit) || 'g',
+    gruppe: gruppe || '',
+    vorstufe: istVorstufeMat(m) ? m.vorteig.teile.map((t) => ({ name: (mats.get(t.materialId) || {}).name || '?', anteil: Number(t.anteil) || 0 })) : null,
+    vorstufeId: istVorstufeMat(m) ? vsIdFuer(m) : null,
+  });
+
+  const rezepte = recipes.map((r) => ({
+    id: String(r.id || r.name),
+    name: String(r.name).trim(),
+    kategorie: r.kategorie || 'Sonstiges',
+    teiggewicht: r.teiggewicht || '',
+    stueck: Number(r.stueckProAnsatz) || 1,
+    anleitung: r.anleitung || '',
+    backen: r.backen || '',
+    zutaten: r.items.map((it) => zutatAus(mats.get(it.materialId), it.menge, it.gruppe)).filter((z) => z.menge > 0),
+  }));
+
+  const vorstufen = [...vsGewinner.entries()]
+    .filter(([key]) => !rezeptNamen.has(key))
+    .map(([, m]) => ({
+      id: 'vs:' + m.id,
+      name: String(m.name).trim(),
+      kategorie: 'Vorstufen',
+      vorstufe: true,
+      teiggewicht: '',
+      stueck: 1,
+      anleitung: '',
+      backen: '',
+      zutaten: m.vorteig.teile
+        .map((t) => zutatAus(mats.get(t.materialId), (Number(t.anteil) || 0) * VORSTUFE_GRUND_G, ''))
         .filter((z) => z.menge > 0),
-    }))
+    }));
+
+  const alle = rezepte.concat(vorstufen)
     .filter((r) => r.zutaten.length)
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  return { eingespielt: Date.now(), rezepte };
+  return { version: GRUNDSTAND_VERSION, eingespielt: Date.now(), rezepte: alle };
 }
 
 // ---------- Verbindung zur Lager-App ----------
@@ -596,15 +655,17 @@ async function einspielen(cNeu) {
     const neu = baueGrundstand(record);
     if (!neu.rezepte.length) throw new Error('In der Lager-App sind keine Rezepte mit Zutaten.');
     const alt = hatRezepte() ? grund.rezepte : [];
-    const altMap = new Map(alt.map((r) => [r.id, JSON.stringify(r.zutaten)]));
+    const zSig = (r) => JSON.stringify(r.zutaten.map((z) => [z.name, z.menge, z.einheit, z.gruppe]));
+    const altMap = new Map(alt.map((r) => [r.id, zSig(r)]));
     const dazu = neu.rezepte.filter((r) => !altMap.has(r.id)).length;
-    const geaendert = neu.rezepte.filter((r) => altMap.has(r.id) && altMap.get(r.id) !== JSON.stringify(r.zutaten)).length;
+    const geaendert = neu.rezepte.filter((r) => altMap.has(r.id) && altMap.get(r.id) !== zSig(r)).length;
     const weg = alt.filter((r) => !neu.rezepte.some((n) => n.id === r.id)).length;
     grund = neu;
     speichere(K.grund, grund);
     speichere(K.config, { apiKey: c.apiKey, lagerBin: c.lagerBin });
     $('#setup-link').value = ''; $('#setup-key').value = ''; $('#setup-bin').value = '';
-    let info = `${neu.rezepte.length} Rezepte eingespielt.`;
+    const anzahlVs = neu.rezepte.filter((r) => r.vorstufe).length;
+    let info = `${neu.rezepte.length - anzahlVs} Rezepte und ${anzahlVs} Vorstufen eingespielt.`;
     if (alt.length) {
       const teile = [];
       if (dazu) teile.push(`${dazu} neu`);
@@ -613,7 +674,7 @@ async function einspielen(cNeu) {
       info += teile.length ? ` (${teile.join(', ')})` : ' Alles war schon am neuesten Stand.';
     }
     ergebnis.innerHTML = `<div class="status-zeile ok">✓ ${esc(info)}</div>`;
-    zeigeToast(`✓ ${neu.rezepte.length} Rezepte eingespielt`);
+    zeigeToast(`✓ ${neu.rezepte.length - anzahlVs} Rezepte + ${anzahlVs} Vorstufen eingespielt`);
     renderAlles();
   } catch (err) {
     ergebnis.innerHTML = `<div class="status-zeile warn">Einspielen hat nicht geklappt: ${esc(err.message)}</div>`;
@@ -708,7 +769,10 @@ function renderTreffer() {
     const nachKat = new Map();
     grund.rezepte.forEach((r) => { if (!nachKat.has(r.kategorie)) nachKat.set(r.kategorie, []); nachKat.get(r.kategorie).push(r); });
     const kats = [...nachKat.keys()].sort((a, b) => katRang(a) - katRang(b) || a.localeCompare(b, 'de'));
-    box.innerHTML = `<div class="hinweis">Tipp den Namen oder die Anfangsbuchstaben ein – oder wähl unten aus allen ${grund.rezepte.length} Rezepten.</div>` +
+    const alt = grund.version !== GRUNDSTAND_VERSION
+      ? '<div class="status-zeile info" style="margin-top:12px">Neu: Vorstufen als eigene Rezepte. <button class="btn-klein" data-aktion="einspielen">Jetzt neu einspielen</button></div>'
+      : '';
+    box.innerHTML = alt + `<div class="hinweis">Tipp den Namen oder die Anfangsbuchstaben ein – oder wähl unten aus allen ${grund.rezepte.length} Rezepten.</div>` +
       kats.map((k) => `<div class="kat-titel">${katEmoji(k)} ${esc(k)}</div><div class="liste">${nachKat.get(k).map((r) => rezeptZeileHTML(r, '')).join('')}</div>`).join('');
   } else if (!liste.length) {
     box.innerHTML = `<div class="leer">Kein Rezept gefunden für „${esc(q.trim())}“.</div>`;
@@ -717,6 +781,75 @@ function renderTreffer() {
   }
 }
 
+// ---------- Menge: kg oder Stück ----------
+// Pro Rezept merkt sich das Gerät, ob zuletzt in kg oder Stück eingegeben wurde und wie schwer ein Stück ist.
+let mengenMerker = lade(K.mengen, {});
+if (!mengenMerker || typeof mengenMerker !== 'object') mengenMerker = {};
+// Stückgewicht laut Lager-App: Grundrezept ÷ Stück pro Ansatz (z. B. Kornspitz 503 g ÷ 5 ≈ 101 g)
+const standardG = (r) => Math.max(1, Math.round(gesamtG(r) / (r.stueck || 1)));
+const gemerkt = (r) => mengenMerker[r.id] || {};
+function merkeMenge(r, m) {
+  mengenMerker[r.id] = m.modus === 'stk' ? { modus: 'stk', g: m.g } : { ...gemerkt(r), modus: 'kg' };
+  speichere(K.mengen, mengenMerker);
+}
+const mengeKurz = (e) => (e.stueck ? `${nf2.format(e.stueck)} Stk` : `${fmtKg(e.kg)} kg`);
+const mengeLang = (e) => (e.stueck ? `${nf2.format(e.stueck)} Stk (${fmtKg(e.kg)} kg)` : `${fmtKg(e.kg)} kg`);
+
+// Eingabe mit Umschalter kg | Stück (Felder liegen fest im HTML, beim Tippen wird nichts neu gezeichnet)
+function mengenFeld(p, beiAenderung) {
+  const box = $(`#${p}-modus`), menge = $(`#${p}-menge`), einheit = $(`#${p}-einheit`), zeile = $(`#${p}-stueck`), gIn = $(`#${p}-g`);
+  let modus = 'kg';
+  const zeigeModus = () => {
+    box.querySelectorAll('button').forEach((b) => b.classList.toggle('an', b.dataset.modus === modus));
+    einheit.textContent = modus === 'stk' ? 'Stk' : 'kg';
+    zeile.hidden = modus !== 'stk';
+  };
+  box.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-modus]');
+    if (!b || b.dataset.modus === modus) return;
+    modus = b.dataset.modus;
+    menge.value = '';
+    zeigeModus();
+    menge.focus();
+    beiAenderung();
+  });
+  menge.addEventListener('input', beiAenderung);
+  gIn.addEventListener('input', beiAenderung);
+  return {
+    menge, gIn,
+    setze({ modus: m, wert, g, nurKg }) {
+      modus = !nurKg && m === 'stk' ? 'stk' : 'kg';
+      box.hidden = !!nurKg;
+      menge.value = wert > 0 ? zahlEingabe(wert) : '';
+      gIn.value = g > 0 ? zahlEingabe(g) : '';
+      zeigeModus();
+    },
+    lies() {
+      const wert = parseZahl(menge.value);
+      const leer = !menge.value.trim();
+      if (modus === 'kg') return { modus, kg: wert, leer, ok: wert > 0 && wert <= 1000 };
+      const g = parseZahl(gIn.value);
+      const kg = (wert * g) / 1000;
+      return { modus, stueck: wert, g, kg, leer, gFehlt: !(g > 0), ok: wert > 0 && g > 0 && kg <= 1000 };
+    },
+  };
+}
+
+function mengenHinweis(r, m) {
+  if (gesamtG(r) <= 0) return 'Dieses Rezept hat kein Gewicht – bitte in der Lager-App prüfen.';
+  if (m.ok) {
+    const f = `${nf2.format(faktorFuer(r, m.kg))} × Grundrezept`;
+    return m.modus === 'stk' ? `${nf2.format(m.stueck)} Stück à ${nf0.format(m.g)} g = ${fmtKg(m.kg)} kg · ${f}` : `= ${f}`;
+  }
+  if (m.leer) return m.modus === 'stk' ? 'Wie viele Stück brauchst du?' : 'Wie viele kg brauchst du?';
+  if (m.modus === 'stk' && m.gFehlt) return 'Bitte eingeben, wie viel Gramm ein Stück hat.';
+  if (m.kg > 1000) return 'Das wären über 1.000 kg – bitte prüfen.';
+  return 'Bitte eine Zahl eingeben, z. B. 2,5';
+}
+
+// ---------- Übersicht: Auswahl + Menge ----------
+let auswahlMenge = null; // wird beim Start angelegt
+
 function renderAuswahl() {
   const box = $('#auswahl');
   const r = auswahlId && rezeptById(auswahlId);
@@ -724,26 +857,23 @@ function renderAuswahl() {
   box.hidden = false;
   $('#auswahl-kat').textContent = `${katEmoji(r.kategorie)} ${r.kategorie}`;
   $('#auswahl-name').textContent = r.name;
-  const g = gesamtG(r);
-  const info = [`Grundrezept: ${fmtKg(g / 1000)} kg`];
+  const info = [`Grundrezept: ${fmtKg(gesamtG(r) / 1000)} kg`];
+  if (r.stueck > 1) info.push(`${r.stueck} Stück à ${nf0.format(standardG(r))} g`);
   if (r.teiggewicht) info.push(`Teiggewicht ${r.teiggewicht}`);
+  if (r.vorstufe) info.push('Vorstufe');
   $('#auswahl-info').innerHTML = info.map((t) => `<span style="white-space:nowrap">${esc(t)}</span>`).join(' · ');
   aktualisiereFaktor();
 }
 
 function aktualisiereFaktor() {
   const r = rezeptById(auswahlId);
-  const kg = parseZahl($('#kg').value);
-  const ok = !!r && kg > 0 && kg <= 1000 && gesamtG(r) > 0;
-  if (r) {
-    $('#auswahl-zutaten-titel').textContent = ok ? `Zutaten für ${fmtKg(kg)} kg ansehen` : 'Zutaten im Grundrezept ansehen';
-    $('#auswahl-zutaten').innerHTML = zutatenTabelleHTML(r, ok ? faktorFuer(r, kg) : 1);
-  }
+  if (!r) return;
+  const m = auswahlMenge.lies();
+  const ok = m.ok && gesamtG(r) > 0;
+  $('#auswahl-zutaten-titel').textContent = ok ? `Zutaten für ${m.modus === 'stk' ? nf2.format(m.stueck) + ' Stück' : fmtKg(m.kg) + ' kg'} ansehen` : 'Zutaten im Grundrezept ansehen';
+  $('#auswahl-zutaten').innerHTML = zutatenTabelleHTML(r, ok ? faktorFuer(r, m.kg) : 1);
   $('#bestaetigen').disabled = !ok;
-  if (r && gesamtG(r) <= 0) $('#auswahl-faktor').textContent = 'Dieses Rezept hat kein Gewicht – bitte in der Lager-App prüfen.';
-  else if (ok) $('#auswahl-faktor').textContent = `= ${nf2.format(faktorFuer(r, kg))} × Grundrezept`;
-  else if ($('#kg').value.trim()) $('#auswahl-faktor').textContent = 'Bitte eine Zahl eingeben, z. B. 2,5';
-  else $('#auswahl-faktor').textContent = 'Wie viele kg brauchst du?';
+  $('#auswahl-faktor').textContent = mengenHinweis(r, m);
 }
 
 function waehle(id) {
@@ -752,11 +882,12 @@ function waehle(id) {
   auswahlId = id;
   $('#suche').value = r.name;
   $('#suche-x').hidden = false;
-  $('#kg').value = '';
+  const mk = gemerkt(r);
+  auswahlMenge.setze({ modus: mk.modus, wert: 0, g: mk.g || standardG(r), nurKg: r.vorstufe });
   renderAuswahl();
   renderTreffer();
   window.scrollTo(0, 0);
-  $('#kg').focus();
+  auswahlMenge.menge.focus();
 }
 
 function auswahlAufheben(fokus) {
@@ -769,20 +900,28 @@ function auswahlAufheben(fokus) {
 }
 
 let neuId = null;
-function bestaetigen() {
-  const r = rezeptById(auswahlId);
-  const kg = parseZahl($('#kg').value);
-  if (!r || !(kg > 0) || kg > 1000) return;
-  const e = { id: neueId(), rezeptId: r.id, name: r.name, kg, datum: heuteISO(), erstellt: Date.now(), status: 'offen', schritt: 0 };
+function eintragen(r, m) {
+  const e = { id: neueId(), rezeptId: r.id, name: r.name, kg: m.kg, datum: heuteISO(), erstellt: Date.now(), status: 'offen', schritt: 0 };
+  if (m.modus === 'stk') { e.stueck = m.stueck; e.gProStueck = m.g; }
   arbeit.push(e);
   speichereArbeit();
   neuId = e.id;
-  $('#kg').blur();
+  setTimeout(() => { neuId = null; }, 2000);
+  return e;
+}
+
+function bestaetigen() {
+  const r = rezeptById(auswahlId);
+  const m = auswahlMenge.lies();
+  if (!r || !m.ok || gesamtG(r) <= 0) return;
+  const e = eintragen(r, m);
+  if (!r.vorstufe) merkeMenge(r, m);
+  auswahlMenge.menge.blur();
+  auswahlMenge.gIn.blur();
   auswahlAufheben(false);
   renderBadge();
   zeigeTab('arbeit');
-  zeigeToast(`${r.name} · ${fmtKg(kg)} kg ist in der Arbeitsübersicht`);
-  setTimeout(() => { neuId = null; }, 2000);
+  zeigeToast(`${r.name} · ${mengeKurz(e)} ist in der Arbeitsübersicht`);
 }
 
 // ---------- Arbeitsübersicht ----------
@@ -793,14 +932,24 @@ function auftragHTML(e, heute) {
   if (e.status === 'fertig') status = `<span class="pill fertig">✓ ${e.fertigUm ? fmtUhr(e.fertigUm) : 'fertig'}</span>`;
   else if (r && e.status === 'laeuft') status = `<span class="pill laeuft">Zutat ${Math.min(e.schritt, n - 1) + 1}/${n}</span>`;
   const alt = e.datum !== heute ? `<span class="pill alt">von ${esc(fmtTagKurz(e.datum))}</span>` : '';
-  const meta = r ? `${n} Zutaten · ${nf2.format(faktorFuer(r, e.kg))} × Grundrezept` : '<span class="warn-text">Rezept fehlt im Grundstand</span>';
+  let meta = '<span class="warn-text">Rezept fehlt im Grundstand</span>';
+  if (r) {
+    const teile = [];
+    if (r.vorstufe) teile.push('Vorstufe');
+    if (e.stueck) teile.push(`à ${nf0.format(e.gProStueck)} g = ${fmtKg(e.kg)} kg`);
+    teile.push(`${n} Zutaten`);
+    if (!e.stueck) teile.push(`${nf2.format(faktorFuer(r, e.kg))} × Grundrezept`);
+    meta = teile.join(' · ');
+  }
+  const zahl = e.stueck ? nf2.format(e.stueck) : fmtKg(e.kg);
   return `<button class="auftrag${e.status === 'fertig' ? ' fertig' : ''}${e.id === neuId ? ' neu' : ''}" data-auftrag="${esc(e.id)}">
-    <span class="auftrag-kg">${fmtKg(e.kg)}<small>kg</small></span>
+    <span class="auftrag-kg">${zahl}<small>${e.stueck ? 'Stk' : 'kg'}</small></span>
     <span class="txt"><span class="name">${esc(r ? r.name : e.name)}</span><br><span class="meta">${meta}</span>${alt}</span>
     ${status}</button>`;
 }
 
-function vorstufenHTML() {
+// Wie viel Vorstufe brauchen die offenen Rezepte – und ist sie schon zum Vorbereiten eingetragen?
+function vorstufenBedarf() {
   const summe = new Map();
   arbeit.forEach((e) => {
     if (e.status === 'fertig') return;
@@ -809,18 +958,49 @@ function vorstufenHTML() {
     const f = faktorFuer(r, e.kg);
     r.zutaten.forEach((z) => {
       if (!z.vorstufe) return;
-      const s = summe.get(z.name) || { menge: 0, einheit: z.einheit, teile: z.vorstufe };
+      const key = z.vorstufeId || 'name:' + z.name;
+      const s = summe.get(key) || { name: z.name, rezeptId: z.vorstufeId, menge: 0, einheit: z.einheit, teile: z.vorstufe };
       s.menge += z.menge * f;
-      summe.set(z.name, s);
+      summe.set(key, s);
     });
   });
-  if (!summe.size) return '';
-  const zeilen = [...summe.entries()].sort((a, b) => a[0].localeCompare(b[0], 'de')).map(([name, s]) => {
+  summe.forEach((s) => {
+    const vr = s.rezeptId && rezeptById(s.rezeptId);
+    if (vr) s.name = vr.name;
+    const eintraege = s.rezeptId ? arbeit.filter((e) => e.rezeptId === s.rezeptId) : [];
+    s.bedarfKg = (s.menge * einheitInG(s.einheit)) / 1000;
+    s.eingetragenKg = eintraege.reduce((a, e) => a + e.kg, 0);
+    s.fertigKg = eintraege.filter((e) => e.status === 'fertig').reduce((a, e) => a + e.kg, 0);
+    // fehlende Menge auf 10 g aufrunden
+    s.fehltKg = Math.ceil((s.bedarfKg - s.eingetragenKg) * 100 - 1e-6) / 100;
+    s.kannRezept = !!vr;
+  });
+  return [...summe.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+function vorstufenHTML() {
+  const liste = vorstufenBedarf();
+  if (!liste.length) return '';
+  const zeilen = liste.map((s) => {
     const m = fmtMenge(s.menge, s.einheit);
     const teile = s.teile.filter((t) => t.anteil > 0).map((t) => `${fmtMenge(s.menge * t.anteil, s.einheit).zahl} ${esc(s.einheit)} ${esc(t.name)}`).join(' + ');
-    return `<div class="vs-zeile"><div><b>${esc(name)}</b>${teile ? `<div class="meta">${teile}</div>` : ''}</div><div class="vs-menge">${m.zahl} ${esc(m.einheit)}</div></div>`;
+    let aktion = '';
+    if (s.kannRezept) {
+      if (s.fertigKg > 0 && s.fertigKg + 0.005 >= s.bedarfKg) aktion = '<span class="pill fertig">✓ vorbereitet</span>';
+      else if (s.fehltKg <= 0) aktion = '<span class="pill laeuft">✓ in der Liste</span>';
+      else aktion = `<button class="vs-knopf" data-aktion="vorstufe-dazu" data-vs="${esc(s.rezeptId)}" data-kg="${s.fehltKg}">+ ${s.eingetragenKg > 0 ? fmtKg(s.fehltKg) + ' kg dazu' : 'Vorbereiten'}</button>`;
+    }
+    return `<div class="vs-zeile"><div><b>${esc(s.name)}</b>${teile ? `<div class="meta">${teile}</div>` : ''}</div><div class="vs-menge">${m.zahl} ${esc(m.einheit)}${aktion}</div></div>`;
   }).join('');
   return `<div class="abschnitt-titel">Vorstufen für alle offenen Rezepte</div><div class="karte" style="margin-top:8px;padding-top:6px;padding-bottom:6px">${zeilen}</div>`;
+}
+
+function vorstufeDazu(id, kg) {
+  const r = rezeptById(id);
+  if (!r || !(kg > 0)) return;
+  const e = eintragen(r, { modus: 'kg', kg });
+  renderArbeit();
+  zeigeToast(`${r.name} · ${mengeKurz(e)} zum Vorbereiten eingetragen`);
 }
 
 function renderArbeit() {
@@ -836,10 +1016,13 @@ function renderArbeit() {
     liste.innerHTML = `<div class="karte leer-karte">
       <div class="gross">🧾</div>
       <b>Noch nichts für heute</b>
-      <p>Tippe auf „Rezept hinzufügen“ oder unten auf <b style="display:inline;font-size:inherit">Übersicht</b>, such dein Rezept und gib die kg ein.</p>
+      <p>Tippe auf „Rezept hinzufügen“ oder unten auf <b style="display:inline;font-size:inherit">Übersicht</b>, such dein Rezept und gib kg oder Stück ein.</p>
     </div>`;
   } else {
-    const sortiert = [...offen].sort((a, b) => a.erstellt - b.erstellt).concat([...fertig].sort((a, b) => (a.fertigUm || 0) - (b.fertigUm || 0)));
+    // Vorstufen zuerst – die müssen vor dem Teig fertig sein
+    const istVs = (e) => { const r = rezeptFuer(e); return r && r.vorstufe ? 0 : 1; };
+    const sortiert = [...offen].sort((a, b) => istVs(a) - istVs(b) || a.erstellt - b.erstellt)
+      .concat([...fertig].sort((a, b) => (a.fertigUm || 0) - (b.fertigUm || 0)));
     liste.innerHTML = `<div class="liste" style="margin-top:14px">${sortiert.map((e) => auftragHTML(e, heute)).join('')}</div>`;
   }
   $('#vorstufen').innerHTML = vorstufenHTML();
@@ -849,12 +1032,23 @@ function renderArbeit() {
 
 // ---------- Rezept aus der Arbeitsübersicht (mit Starten) ----------
 let detailId = null;
+let detailMenge = null; // wird beim Start angelegt
+
+function detailFelderSetzen(e) {
+  const r = rezeptFuer(e);
+  detailMenge.setze({
+    modus: e.stueck ? 'stk' : 'kg',
+    wert: e.stueck || e.kg,
+    g: e.gProStueck || (r ? gemerkt(r).g || standardG(r) : 0),
+    nurKg: !r || r.vorstufe,
+  });
+}
 
 function oeffneDetail(id) {
   const e = auftrag(id);
   if (!e) return;
   detailId = id;
-  $('#detail-kg').value = fmtKgEingabe(e.kg);
+  detailFelderSetzen(e);
   renderDetail();
   zeigeOverlay($('#detail'));
   $('#detail .overlay-inhalt').scrollTop = 0;
@@ -866,8 +1060,7 @@ function renderDetail() {
   const r = rezeptFuer(e);
   $('#detail-kat').textContent = r ? `${katEmoji(r.kategorie)} ${r.kategorie}` : '';
   $('#detail-name').textContent = r ? r.name : e.name;
-  const eingabe = parseZahl($('#detail-kg').value);
-  const kg = eingabe > 0 && eingabe <= 1000 ? eingabe : e.kg;
+  const m = detailMenge.lies();
   const n = r ? r.zutaten.length : 0;
   let status = '';
   if (e.status === 'fertig') status = `<div class="status-zeile ok">✓ Erledigt${e.fertigUm ? ' um ' + fmtUhr(e.fertigUm) : ''}</div>`;
@@ -879,9 +1072,10 @@ function renderDetail() {
     $('#detail-zutaten').innerHTML = '<div class="warn-text">Dieses Rezept ist nicht mehr im Grundstand. Spiel die Rezepte neu ein oder entferne den Eintrag.</div>';
     $('#detail-anleitung').innerHTML = '';
   } else {
-    const f = faktorFuer(r, kg);
-    $('#detail-faktor').textContent = `= ${nf2.format(f)} × Grundrezept (${fmtKg(gesamtG(r) / 1000)} kg)`;
-    $('#detail-zutaten').innerHTML = zutatenTabelleHTML(r, f);
+    // solange die Eingabe unfertig ist, gilt die gespeicherte Menge
+    const gilt = m.ok ? m : e.stueck ? { ok: true, modus: 'stk', stueck: e.stueck, g: e.gProStueck, kg: e.kg } : { ok: true, modus: 'kg', kg: e.kg };
+    $('#detail-faktor').textContent = m.ok || m.leer ? mengenHinweis(r, gilt) : mengenHinweis(r, m);
+    $('#detail-zutaten').innerHTML = zutatenTabelleHTML(r, faktorFuer(r, gilt.kg));
     $('#detail-anleitung').innerHTML = anleitungHTML(r);
   }
   const start = $('#starten');
@@ -891,22 +1085,29 @@ function renderDetail() {
   else { start.textContent = '▶ Starten'; $('#von-vorne').hidden = true; }
 }
 
-// kg im Rezept übernehmen (beim Verlassen des Feldes, vor dem Starten, beim Schließen)
-function detailKgUebernehmen() {
+// Menge im Rezept übernehmen (beim Verlassen des Feldes, vor dem Starten, beim Schließen)
+function detailMengeUebernehmen() {
   const e = auftrag(detailId);
   if (!e) return;
-  const kg = parseZahl($('#detail-kg').value);
-  if (kg > 0 && kg <= 1000) {
-    if (Math.abs(kg - e.kg) > 1e-9) { e.kg = kg; speichereArbeit(); }
+  const r = rezeptFuer(e);
+  const m = detailMenge.lies();
+  if (m.ok) {
+    const vorher = JSON.stringify([e.kg, e.stueck, e.gProStueck]);
+    e.kg = m.kg;
+    if (m.modus === 'stk') { e.stueck = m.stueck; e.gProStueck = m.g; } else { delete e.stueck; delete e.gProStueck; }
+    if (JSON.stringify([e.kg, e.stueck, e.gProStueck]) !== vorher) {
+      speichereArbeit();
+      if (r && !r.vorstufe) merkeMenge(r, m);
+    }
   }
-  $('#detail-kg').value = fmtKgEingabe(e.kg);
+  detailFelderSetzen(e);
   renderDetail();
 }
 
 function entfernen() {
   const e = auftrag(detailId);
   if (!e) return;
-  if (!confirm(`„${e.name}“ (${fmtKg(e.kg)} kg) aus der Arbeitsübersicht entfernen?`)) return;
+  if (!confirm(`„${e.name}“ (${mengeKurz(e)}) aus der Arbeitsübersicht entfernen?`)) return;
   arbeit = arbeit.filter((x) => x.id !== e.id);
   speichereArbeit();
   schliesseOverlay();
@@ -919,7 +1120,7 @@ let lauf = null; // { id, ende }
 let weiterSperre = 0;
 
 function starten(vonVorne) {
-  detailKgUebernehmen();
+  detailMengeUebernehmen();
   const e = auftrag(detailId);
   const r = e && rezeptFuer(e);
   if (!r || !r.zutaten.length) return;
@@ -942,7 +1143,7 @@ function renderSchritt(anim) {
   if (!r) return;
   const n = r.zutaten.length;
   const f = faktorFuer(r, e.kg);
-  $('#schritt-titel').textContent = `${r.name} · ${fmtKg(e.kg)} kg`;
+  $('#schritt-titel').textContent = `${r.name} · ${mengeLang(e)}`;
   $('#schritt-balken').innerHTML = r.zutaten.map((_, i) => `<i class="${lauf.ende || i < e.schritt ? 'ok' : i === e.schritt ? 'jetzt' : ''}"></i>`).join('');
   const karte = $('#schritt-karte');
   if (lauf.ende) {
@@ -952,7 +1153,7 @@ function renderSchritt(anim) {
     karte.innerHTML = `<div style="width:100%">
       <div class="fertig-haken">✓</div>
       <div class="zutat-name" style="margin-bottom:6px">Alles abgewogen!</div>
-      <div class="meta" style="font-size:16px">Alle ${n} Zutaten für ${esc(r.name)} · ${fmtKg(e.kg)} kg</div>
+      <div class="meta" style="font-size:16px">Alle ${n} Zutaten für ${esc(r.name)} · ${mengeKurz(e)}</div>
       <div class="fertig-liste">${liste}</div>
       ${anleitungHTML(r)}
       <div class="fertig-knoepfe">
@@ -1057,7 +1258,7 @@ function beimSchliessen(el) {
     renderArbeit();
     if (detailId) renderDetail();
   } else if (el.id === 'detail') {
-    detailKgUebernehmen();
+    detailMengeUebernehmen();
     detailId = null;
     renderArbeit();
   }
@@ -1155,14 +1356,16 @@ function start() {
   suchfeld.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Enter') return;
     ev.preventDefault();
-    if (auswahlId) { $('#kg').focus(); return; }
+    if (auswahlId) { auswahlMenge.menge.focus(); return; }
     const l = suche(suchfeld.value);
     if (l && l.length) waehle(l[0].id);
   });
   $('#suche-x').addEventListener('click', () => auswahlAufheben(true));
   $('#auswahl-zurueck').addEventListener('click', () => auswahlAufheben(true));
-  $('#kg').addEventListener('input', aktualisiereFaktor);
-  $('#kg').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (!$('#bestaetigen').disabled) bestaetigen(); } });
+  auswahlMenge = mengenFeld('auswahl', aktualisiereFaktor);
+  [auswahlMenge.menge, auswahlMenge.gIn].forEach((el) => el.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); if (!$('#bestaetigen').disabled) bestaetigen(); }
+  }));
   $('#bestaetigen').addEventListener('click', bestaetigen);
 
   document.addEventListener('click', (ev) => {
@@ -1175,6 +1378,7 @@ function start() {
     const a = akt.dataset.aktion;
     if (a === 'einspielen') { if (holeConfig() || fremdeConfig()) einspielen(); else { zeigeTab('einst'); $('#verbindung-karte').scrollIntoView({ block: 'start' }); } }
     else if (a === 'zur-arbeit') { schliesseAlle(); zeigeTab('arbeit'); }
+    else if (a === 'vorstufe-dazu') vorstufeDazu(akt.dataset.vs, parseFloat(akt.dataset.kg));
   });
 
   $('#arbeit-neu').addEventListener('click', () => { zeigeTab('uebersicht'); auswahlAufheben(true); });
@@ -1185,9 +1389,11 @@ function start() {
   });
 
   document.querySelectorAll('[data-zurueck]').forEach((b) => b.addEventListener('click', schliesseOverlay));
-  $('#detail-kg').addEventListener('input', renderDetail);
-  $('#detail-kg').addEventListener('change', detailKgUebernehmen);
-  $('#detail-kg').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
+  detailMenge = mengenFeld('detail', renderDetail);
+  [detailMenge.menge, detailMenge.gIn].forEach((el) => {
+    el.addEventListener('change', detailMengeUebernehmen);
+    el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
+  });
   $('#starten').addEventListener('click', () => starten(false));
   $('#von-vorne').addEventListener('click', () => starten(true));
   $('#entfernen').addEventListener('click', entfernen);
@@ -1213,6 +1419,8 @@ function start() {
 
   renderAlles();
   zeigeTab('uebersicht');
+  // Grundstand von vor den Vorstufen-Rezepten: einmal von selbst neu einspielen
+  if (hatRezepte() && grund.version !== GRUNDSTAND_VERSION && (holeConfig() || fremdeConfig())) einspielen();
   window.__appGestartet = true;
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
