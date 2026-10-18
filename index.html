@@ -308,7 +308,7 @@
         <label class="temp-zeile"><span>Kühlschrank <small>(Milch, Eier, Butter)</small></span><span class="g-feld"><input data-temp="kuehl" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
         <label class="temp-zeile"><span>Kneterwärmung <small>Spiralkneter</small></span><span class="g-feld"><input data-temp="spiral" type="text" inputmode="decimal" autocomplete="off"><span>°C</span></span></label>
       </div>
-      <p class="meta">Hubkneter: keine Erwärmung. Teigtemperatur und Kneter stellst du im Rezept ein. Rechnung wie in der Backstube: (Teigtemperatur − Kneterwärmung) × Teile − Mehl − Mehl − übrige Teile; unter Leitungswasser-Temperatur 1 % Eis pro °C.</p>
+      <p class="meta">Hubkneter: keine Erwärmung. Teigtemperatur und Kneter stellst du im Rezept ein. Rechnung wie in der Backstube: (Teigtemperatur − Kneterwärmung) × Teile − Mehl − Mehl − übrige Teile. Milch, Eier und Butter zählen nach Menge (1 Teil = halbe Mehlmenge). Unter Leitungswasser-Temperatur 1 % Eis pro °C.</p>
     </details>
     <button id="arbeit-neu" class="btn-zweit btn-breit">+ Rezept hinzufügen</button>
     <div id="arbeit-liste"></div>
@@ -434,7 +434,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.2 · 18.10.2026';
+const APP_VERSION = '1.3 · 18.10.2026';
 
 // Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
 // darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
@@ -545,6 +545,8 @@ function teigAnalyse(r) {
   const namen = {}; // wie der Teil in der Rechnung heißt (z. B. „Sauerrahm“ statt „Milch“)
   const dazu = (art, name) => { arten.add(art); if (!namen[art]) namen[art] = name; };
   const wasser = [], milch = [];
+  const gramm = {}; // Mengen im Grundrezept (für Milch, Eier, Butter „nach Menge“)
+  const plus = (k, g) => { gramm[k] = (gramm[k] || 0) + (Number(g) || 0); };
   let hatMehl = false;
   r.zutaten.forEach((z, i) => {
     const g = z.gruppe || '';
@@ -555,16 +557,16 @@ function teigAnalyse(r) {
     if (/vorteig/i.test(g)) { dazu('vorteig', g); return; }
     const a = zutatArt(z.name);
     if (a === 'wasser') wasser.push(i);
-    else if (a === 'mehl') hatMehl = true;
-    else if (a === 'milch') { milch.push(i); dazu('milch', z.name); }
-    else if (a) dazu(a, z.name);
+    else if (a === 'mehl') { hatMehl = true; plus('mehl', z.menge); }
+    else if (a === 'milch') { milch.push(i); dazu('milch', z.name); plus('milch', z.menge); }
+    else if (a) { dazu(a, z.name); plus(a, z.menge); }
   });
   let fluessig = 'Wasser', zeilen = wasser;
   // ohne Wasser ist die Milch die Schüttflüssigkeit
   if (!zeilen.length && milch.length) { fluessig = 'Milch'; zeilen = milch; arten.delete('milch'); }
   if (!zeilen.length || !hatMehl) return null;
   const reihenfolge = ['sauerteig', 'kochstueck', 'vorteig', 'milch', 'eier', 'butter'];
-  return { fluessig, zeilen, arten: reihenfolge.filter((a) => arten.has(a)), namen };
+  return { fluessig, zeilen, arten: reihenfolge.filter((a) => arten.has(a)), namen, gramm };
 }
 
 // Brotteige (Brot mit Sauerteig) 32–34 °C, alle anderen Teige 25–27 °C – vorgeschlagen wird die Mitte
@@ -584,13 +586,28 @@ function schuettwasser(r) {
   if (!a) return null;
   const { tt, kneter } = teigEinstellung(r);
   const erw = kneter === 'hub' ? 0 : temps.spiral;
-  const teile = [{ name: 'Mehl', t: temps.mehl }, { name: 'Mehl', t: temps.mehl }]
-    .concat(a.arten.map((art) => ({ name: a.namen[art] || TEIL_NAMEN[art], t: teilTemp(art) })));
-  const n = teile.length + 1;
-  const soll = rund1((tt - erw) * n - teile.reduce((s, t) => s + t.t, 0));
+  // Mehl zählt 2 Teile, Sauerteig/Kochstück/Vorteig je 1 Teil.
+  // Milch, Eier und Butter zählen nach Menge: so viel Gewicht wie die halbe Mehlmenge = 1 Teil.
+  const teilG = (a.gramm.mehl || 0) / 2;
+  const nachMenge = (art) => art === 'milch' || art === 'eier' || art === 'butter';
+  const teile = [{ name: 'Mehl', t: temps.mehl, w: 1 }, { name: 'Mehl', t: temps.mehl, w: 1 }]
+    .concat(a.arten.map((art) => ({
+      name: a.namen[art] || TEIL_NAMEN[art],
+      t: teilTemp(art),
+      w: nachMenge(art) ? (teilG > 0 ? Math.round(((a.gramm[art] || 0) / teilG) * 100) / 100 : 0) : 1,
+      nachMenge: nachMenge(art),
+    })))
+    .filter((t) => t.w > 0);
+  const n = Math.round((teile.reduce((s, t) => s + t.w, 0) + 1) * 100) / 100;
+  const soll = rund1((tt - erw) * n - teile.reduce((s, t) => s + t.w * t.t, 0));
   const eisProzent = a.fluessig === 'Wasser' && soll < temps.leitung ? Math.min(100, rund1(temps.leitung - soll)) : 0;
-  const formel = `(${nf1.format(tt)} − ${nf1.format(erw)}) × ${n} − ${teile.map((t) => `${t.name} ${nf1.format(t.t)}`).join(' − ')} = ${nf1.format(soll)} °C`;
-  return { ...a, tt, kneter, erw, n, teile, soll, eisProzent, formel };
+  const formel = `(${nf1.format(tt)} − ${nf1.format(erw)}) × ${nf2.format(n)} − ` +
+    teile.map((t) => `${t.name} ${nf1.format(t.t)}${t.nachMenge ? ` × ${nf2.format(t.w)}` : ''}`).join(' − ') +
+    ` = ${nf1.format(soll).replace('-', '−')} °C`;
+  const mengenHinweis = teile.some((t) => t.nachMenge)
+    ? `${teile.filter((t) => t.nachMenge).map((t) => t.name).join(', ')} ${teile.filter((t) => t.nachMenge).length > 1 ? 'zählen' : 'zählt'} nach Menge: 1 Teil = halbe Mehlmenge (${nf0.format(teilG)} g im Grundrezept).`
+    : '';
+  return { ...a, tt, kneter, erw, n, teile, soll, eisProzent, formel, mengenHinweis };
 }
 
 // Die Schritte zum Abwiegen: wie die Zutaten, nur das Schüttwasser bekommt seine Temperatur
@@ -663,7 +680,7 @@ function swErgebnisHTML(r, f) {
     h += `<div class="sw-warn">Über 45 °C schadet der Hefe! Teigtemperatur und Kneter prüfen${kalt.length ? ` oder ${kalt.join(', ')} vorher temperieren` : ''} – und die Hefe nicht direkt mit dem heißen Wasser zusammenbringen.</div>`;
   }
   if (was === 'Milch' && sw.soll < temps.kuehl) h += `<div class="sw-warn">Kälter als aus dem Kühlschrank (${nf1.format(temps.kuehl)} °C) geht nicht – Mehl kühler stellen.</div>`;
-  h += `<div class="sw-formel">${esc(sw.formel)}</div>`;
+  h += `<div class="sw-formel">${esc(sw.formel)}${sw.mengenHinweis ? `<br>${esc(sw.mengenHinweis)}` : ''}</div>`;
   return h;
 }
 
