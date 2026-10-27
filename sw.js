@@ -1,8 +1,8 @@
 // Offline-Speicher der Rezept-App.
 // Achtung: Lager-, Bestell- und Rezept-App liegen auf derselben Adresse und teilen sich die Cache-Liste –
 // darum werden hier NUR eigene Caches ("rezeptapp-…") gelöscht.
-const CACHE_NAME = 'rezeptapp-v1';
-const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'rezeptapp-v2';
+const APP_SHELL = ['./', './index.html', './zugang.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -36,12 +36,13 @@ self.addEventListener('fetch', (event) => {
     return res;
   };
 
-  // Die Seite selbst: zuerst aus dem Netz (neueste Version), offline aus dem Speicher
-  if (req.mode === 'navigate') {
+  // Seite und Programmteile (zugang.js): zuerst aus dem Netz (immer zusammenpassend), offline aus dem Speicher
+  if (req.mode === 'navigate' || req.destination === 'script') {
+    const key = req.mode === 'navigate' ? './index.html' : req;
     event.respondWith(
       fetch(req)
-        .then((res) => merken('./index.html', res))
-        .catch(() => caches.match('./index.html').then((c) => c || caches.match('./')))
+        .then((res) => merken(key, res))
+        .catch(() => caches.match(key).then((c) => c || caches.match('./')))
     );
     return;
   }

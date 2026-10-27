@@ -44,7 +44,9 @@
   .kopf { position: sticky; top: 0; z-index: 5; background: var(--crust); color: var(--cream); padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
   .kopf-innen { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
   .kopf h1 { font-family: var(--serif); font-size: 21px; margin: 0; font-weight: 600; flex: 1; }
-  .kopf .kopf-info { font-size: 12px; color: #D9C6A8; text-align: right; }
+  .kopf .kopf-info { font-size: 12px; color: #D9C6A8; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .kopf-wer { background: rgba(255, 255, 255, .12); color: var(--cream); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+  .kopf-wer:active { background: rgba(255, 255, 255, .22); }
 
   main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(var(--nav-h) + 40px + env(safe-area-inset-bottom)); }
   h2 { font-family: var(--serif); font-size: 26px; margin: 2px 0 12px; font-weight: 600; line-height: 1.15; }
@@ -176,6 +178,7 @@
   .sw-mini { color: #2F6E9E; font-weight: 650; }
   .sw-karte { border-color: #CFE3F1; background: #F7FBFE; }
   .sw-karte .modus button { min-width: 0; font-size: 15px; }
+  body.mitarbeiter #detail-kneter, body.mitarbeiter #detail-tt, body.mitarbeiter [data-temp="spiral"] { pointer-events: none; opacity: .65; }
   .sw-gross { font-size: 22px; margin-top: 14px; }
   .sw-gross b { font-size: 34px; color: #2F6E9E; font-variant-numeric: tabular-nums; }
   .sw-eis { margin-top: 6px; font-size: 16px; line-height: 1.5; }
@@ -328,26 +331,11 @@
       <div id="einspiel-ergebnis"></div>
     </div>
 
-    <div class="karte" id="verbindung-karte">
-      <div class="karte-titel">Verbindung zur Lager-App</div>
-      <div id="verbindung-status"></div>
-      <div id="verbindung-formular">
-        <div id="uebernehmen-box" hidden>
-          <button id="uebernehmen" class="btn-zweit btn-breit" style="margin-top:12px"></button>
-        </div>
-        <label class="feld-label" for="setup-link">Link aus der Lager-App einfügen</label>
-        <textarea id="setup-link" class="eingabe" placeholder="https://…#setup=…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-        <div class="meta" style="margin-top:6px">In der Lager-App: Einstellungen → „Neues Gerät einrichten“ → Link kopieren. Der Link aus der Bestell-App geht auch.</div>
-        <details>
-          <summary>Oder Schlüssel und Speicher-Nr. von Hand eingeben</summary>
-          <label class="feld-label" for="setup-key">jsonbin-Schlüssel (X-Master-Key)</label>
-          <input id="setup-key" class="eingabe" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <label class="feld-label" for="setup-bin">Speicher-Nr. der Lager-App</label>
-          <input id="setup-bin" class="eingabe" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-        </details>
-        <button id="verbinden" class="btn-primaer btn-breit" style="margin-top:14px">Verbinden &amp; einspielen</button>
-      </div>
-      <button id="trennen" class="btn-text warn" hidden>Verbindung auf diesem Gerät trennen</button>
+    <div class="karte" id="zugang-karte">
+      <div class="karte-titel">Zugang</div>
+      <div id="zugang-status"></div>
+      <p>Mitarbeiter legst du in der Bestell-App an (Einstellungen → Mitarbeiter &amp; Protokoll). Dort richtest du auch neue Geräte ein.</p>
+      <button id="abmelden" class="btn-zweit btn-breit" style="margin-top:12px">Abmelden</button>
     </div>
 
     <div class="karte">
@@ -432,9 +420,10 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="./zugang.js"></script>
 <script>
 'use strict';
-const APP_VERSION = '1.3 · 18.10.2026';
+const APP_VERSION = '1.4 · 27.10.2026';
 
 // Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
 // darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
@@ -794,42 +783,20 @@ function baueGrundstand(record) {
   return { version: GRUNDSTAND_VERSION, eingespielt: Date.now(), rezepte: alle };
 }
 
-// ---------- Verbindung zur Lager-App ----------
-function holeConfig() {
-  const c = lade(K.config, null);
-  return c && c.apiKey && c.lagerBin ? c : null;
-}
-// Ist die Lager- oder Bestell-App im selben Browser schon eingerichtet?
-function fremdeConfig() {
-  try {
-    const a = localStorage.getItem('jsonbin_apikey'), b = localStorage.getItem('jsonbin_binid');
-    if (a && b) return { apiKey: a, lagerBin: b, quelle: 'Lager-App' };
-  } catch (e) {}
-  try {
-    const c = JSON.parse(localStorage.getItem('bestellapp_config') || 'null');
-    if (c && c.apiKey && c.lagerBin) return { apiKey: c.apiKey, lagerBin: c.lagerBin, quelle: 'Bestell-App' };
-  } catch (e) {}
-  return null;
-}
-// Link der Lager-App (Schlüssel|Speicher) oder der Bestell-App (Schlüssel|Lager|Bestell)
-function parseSetup(text) {
-  const m = String(text || '').trim().match(/#setup=([^\s#]+)/);
-  if (!m) return null;
-  try {
-    const p = atob(decodeURIComponent(m[1])).split('|');
-    if (p.length >= 2 && p[0] && p[1]) return { apiKey: p[0].trim(), lagerBin: p[1].trim() };
-  } catch (e) {}
-  return null;
-}
+// ---------- Online-Speicher ----------
+// Schlüssel, Anmeldung (Chef / Mitarbeiter) und Speicher-Nummern regelt zugang.js.
+const lagerBin = () => Zugang.geraet().lagerBin;
 
-async function ladeLagerDaten(c) {
+async function ladeLagerDaten() {
+  const bin = lagerBin();
+  if (!bin) throw new Error('Dieses Gerät kennt den Speicher der Lager-App nicht – bitte neu einrichten.');
   let res;
   try {
-    res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(c.lagerBin)}/latest`, { headers: { 'X-Master-Key': c.apiKey }, cache: 'no-store' });
+    res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(bin)}/latest`, { headers: Zugang.kopf(), cache: 'no-store' });
   } catch (e) {
     throw new Error('Keine Internetverbindung.');
   }
-  if (res.status === 401 || res.status === 403) throw new Error('Der Schlüssel passt nicht.');
+  if (res.status === 401 || res.status === 403) throw new Error('Keine Berechtigung – bitte das Gerät neu einrichten.');
   if (res.status === 404) throw new Error('Den Speicher der Lager-App gibt es so nicht.');
   if (!res.ok) throw new Error(`Der Online-Speicher meldet Fehler ${res.status}.`);
   const json = await res.json();
@@ -838,26 +805,19 @@ async function ladeLagerDaten(c) {
   return record;
 }
 
+// still = automatisch beim Start (ohne Protokoll-Eintrag und ohne Meldung bei Fehlern)
 let spieltEin = false;
-async function einspielen(cNeu) {
+async function einspielen(still) {
   if (spieltEin) return;
   const ergebnis = $('#einspiel-ergebnis');
-  let c = cNeu || holeConfig();
-  if (!c) { const f = fremdeConfig(); if (f) c = { apiKey: f.apiKey, lagerBin: f.lagerBin }; }
-  if (!c) {
-    zeigeTab('einst');
-    ergebnis.innerHTML = '<div class="status-zeile warn">Verbinde die App zuerst unten mit der Lager-App.</div>';
-    $('#verbindung-karte').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return;
-  }
   spieltEin = true;
-  const knoepfe = [$('#einspielen'), $('#verbinden')];
-  knoepfe.forEach((b) => b.classList.add('laeuft-gerade'));
-  const alterText = $('#einspielen').textContent;
-  $('#einspielen').textContent = 'Rezepte werden geladen …';
+  const knopf = $('#einspielen');
+  knopf.classList.add('laeuft-gerade');
+  const alterText = knopf.textContent;
+  knopf.textContent = 'Rezepte werden geladen …';
   ergebnis.innerHTML = '';
   try {
-    const record = await ladeLagerDaten(c);
+    const record = await ladeLagerDaten();
     const neu = baueGrundstand(record);
     if (!neu.rezepte.length) throw new Error('In der Lager-App sind keine Rezepte mit Zutaten.');
     const alt = hatRezepte() ? grund.rezepte : [];
@@ -868,8 +828,6 @@ async function einspielen(cNeu) {
     const weg = alt.filter((r) => !neu.rezepte.some((n) => n.id === r.id)).length;
     grund = neu;
     speichere(K.grund, grund);
-    speichere(K.config, { apiKey: c.apiKey, lagerBin: c.lagerBin });
-    $('#setup-link').value = ''; $('#setup-key').value = ''; $('#setup-bin').value = '';
     const anzahlVs = neu.rezepte.filter((r) => r.vorstufe).length;
     let info = `${neu.rezepte.length - anzahlVs} Rezepte und ${anzahlVs} Vorstufen eingespielt.`;
     if (alt.length) {
@@ -880,14 +838,18 @@ async function einspielen(cNeu) {
       info += teile.length ? ` (${teile.join(', ')})` : ' Alles war schon am neuesten Stand.';
     }
     ergebnis.innerHTML = `<div class="status-zeile ok">✓ ${esc(info)}</div>`;
-    zeigeToast(`✓ ${neu.rezepte.length - anzahlVs} Rezepte + ${anzahlVs} Vorstufen eingespielt`);
+    if (!still) {
+      zeigeToast(`✓ ${neu.rezepte.length - anzahlVs} Rezepte + ${anzahlVs} Vorstufen eingespielt`);
+      Zugang.log(`Rezepte neu eingespielt: ${info}`);
+    }
     renderAlles();
   } catch (err) {
     ergebnis.innerHTML = `<div class="status-zeile warn">Einspielen hat nicht geklappt: ${esc(err.message)}</div>`;
+    if (!still) zeigeToast('Einspielen hat nicht geklappt');
   } finally {
     spieltEin = false;
-    knoepfe.forEach((b) => b.classList.remove('laeuft-gerade'));
-    $('#einspielen').textContent = alterText;
+    knopf.classList.remove('laeuft-gerade');
+    knopf.textContent = alterText;
     renderEinst();
   }
 }
@@ -904,7 +866,9 @@ function zeigeTab(t) {
 }
 
 function renderKopf() {
-  $('#kopf-info').textContent = hatRezepte() ? `${grund.rezepte.length} Rezepte` : '';
+  const s = Zugang.sitzung;
+  $('#kopf-info').innerHTML = (hatRezepte() ? `${grund.rezepte.length} Rezepte` : '') +
+    (s ? `<button class="kopf-wer" data-aktion="abmelden" title="Abmelden">👤 ${esc(s.name)} · Abmelden</button>` : '');
 }
 function renderBadge() {
   const offen = arbeit.filter((e) => e.status !== 'fertig').length;
@@ -1371,7 +1335,8 @@ function starten(vonVorne) {
   e.status = 'laeuft';
   delete e.fertigUm;
   speichereArbeit();
-  lauf = { id: e.id, ende: false, vorher };
+  lauf = { id: e.id, ende: false, vorher, beginn: Date.now() };
+  Zugang.log(`${r.name} · ${mengeLang(e)}: Abwiegen ${vonVorne || vorher.status === 'fertig' ? 'begonnen' : e.schritt > 0 ? `fortgesetzt bei Schritt ${e.schritt + 1}` : 'begonnen'}`);
   weiterSperre = 0;
   renderSchritt('rein');
   zeigeOverlay($('#schritt'));
@@ -1454,6 +1419,7 @@ function weiter() {
     e.schritt = 0;
     speichereArbeit();
     lauf.ende = true;
+    Zugang.log(`${r.name} · ${mengeLang(e)}: fertig abgewogen (${schritteVon(e, r).length} Schritte${lauf.beginn ? `, ${Math.max(1, Math.round((Date.now() - lauf.beginn) / 60000))} Min.` : ''})`);
     renderSchritt('rein');
     renderArbeit();
   }
@@ -1522,54 +1488,19 @@ window.addEventListener('popstate', (ev) => {
   }
 });
 
-// ---------- Einstellungen ----------
+// ---------- Einstellungen (nur Chef) ----------
 function renderEinst() {
   $('#version').textContent = 'Version ' + APP_VERSION;
   $('#einst-grund').innerHTML = hatRezepte()
     ? `<div class="status-zeile ok">✓ ${grund.rezepte.length} Rezepte · eingespielt am ${esc(fmtDatumZeit(grund.eingespielt))}</div>`
     : '<div class="status-zeile info">Noch keine Rezepte eingespielt.</div>';
   if (!spieltEin) $('#einspielen').textContent = hatRezepte() ? 'Rezepte neu einspielen' : 'Rezepte einspielen';
-
-  const c = holeConfig();
-  const f = fremdeConfig();
-  if (c) {
-    $('#verbindung-status').innerHTML = `<div class="status-zeile ok">✓ Verbunden · Speicher-Nr. …${esc(String(c.lagerBin).slice(-6))}</div>`;
-    $('#verbindung-formular').hidden = true;
-    $('#trennen').hidden = false;
-  } else {
-    $('#verbindung-status').innerHTML = f
-      ? `<div class="status-zeile info">Die ${esc(f.quelle)} ist in diesem Browser schon eingerichtet – ein Tipp genügt.</div>`
-      : '<div class="status-zeile info">Noch nicht verbunden. Einmal einrichten, dann kannst du die Rezepte einspielen.</div>';
-    $('#verbindung-formular').hidden = false;
-    $('#uebernehmen-box').hidden = !f;
-    if (f) $('#uebernehmen').textContent = `Verbindung der ${f.quelle} übernehmen`;
-    $('#trennen').hidden = true;
-  }
-}
-
-function verbinden() {
-  const ausLink = parseSetup($('#setup-link').value);
-  const key = $('#setup-key').value.trim(), bin = $('#setup-bin').value.trim();
-  const c = ausLink || (key && bin ? { apiKey: key, lagerBin: bin } : null);
-  if (!c) {
-    $('#einspiel-ergebnis').innerHTML = '';
-    zeigeToast($('#setup-link').value.trim() ? 'Der Link passt nicht – bitte den ganzen Link einfügen' : 'Bitte zuerst den Link einfügen');
-    return;
-  }
-  einspielen(c);
-}
-
-function setupAusAdresse() {
-  if (!location.hash.startsWith('#setup=')) return;
-  const c = parseSetup(location.hash);
-  history.replaceState({ ov: 0 }, '', location.pathname + location.search);
-  if (!c) return;
-  const vorher = holeConfig();
-  if (vorher && vorher.lagerBin !== c.lagerBin &&
-    !confirm('Achtung: Dieser Link verbindet die App mit einem ANDEREN Online-Speicher.\n\nNur bestätigen, wenn der Link von deinem eigenen Gerät stammt. Fortfahren?')) return;
-  speichere(K.config, c);
-  if (!hatRezepte()) setTimeout(() => einspielen(c), 50);
-  else zeigeToast('Verbunden ✓');
+  const s = Zugang.sitzung;
+  const offen = Zugang.offeneEintraege();
+  $('#zugang-status').innerHTML = s
+    ? `<div class="status-zeile ok">✓ Angemeldet als ${esc(s.name)} (${s.rolle === 'chef' ? 'Chef' : 'Mitarbeiter'})</div>` +
+      (offen ? `<div class="status-zeile info">${offen} Protokoll-Einträge warten noch auf Internet.</div>` : '')
+    : '';
 }
 
 // ---------- Alles zeichnen ----------
@@ -1583,10 +1514,19 @@ function renderAlles() {
 }
 
 // ---------- Start ----------
-function start() {
+async function start() {
+  // Anmeldung (Chef-Code / Mitarbeiter-Code) – vorher geht nichts weiter
+  await Zugang.start({ app: 'rezept' });
+  if (!Zugang.istChef()) {
+    document.querySelector('.nav [data-tab="einst"]').hidden = true;
+    document.body.classList.add('mitarbeiter');
+    // Teigtemperatur, Kneter und Kneterwärmung nur ansehen
+    $('#detail-tt').readOnly = true;
+    $('[data-temp="spiral"]').readOnly = true;
+    $('#detail-tt-hinweis').insertAdjacentHTML('afterend', ' <span class="meta">· stellt der Chef ein</span>');
+  }
   history.replaceState({ ov: 0 }, '');
   aufraeumen();
-  setupAusAdresse();
 
   document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => {
     const t = b.dataset.tab;
@@ -1626,8 +1566,9 @@ function start() {
     const akt = ev.target.closest('[data-aktion]');
     if (!akt) return;
     const a = akt.dataset.aktion;
-    if (a === 'einspielen') { if (holeConfig() || fremdeConfig()) einspielen(); else { zeigeTab('einst'); $('#verbindung-karte').scrollIntoView({ block: 'start' }); } }
+    if (a === 'einspielen') einspielen();
     else if (a === 'zur-arbeit') { schliesseAlle(); zeigeTab('arbeit'); }
+    else if (a === 'abmelden') Zugang.abmelden();
     else if (a === 'vorstufe-dazu') vorstufeDazu(akt.dataset.vs, parseFloat(akt.dataset.kg));
     else if (a === 'temperaturen') {
       schliesseAlle();
@@ -1662,20 +1603,28 @@ function start() {
     el.addEventListener('blur', () => renderTemps(true));
     el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } });
   });
+  // Teigtemperatur und Kneter pro Rezept stellt nur der Chef ein (Mitarbeiter sehen die Werte)
   $('#detail-tt').addEventListener('input', () => {
+    if (!Zugang.istChef()) return;
     const e = auftrag(detailId), r = e && rezeptFuer(e), v = parseZahl($('#detail-tt').value);
     if (!r || !(v >= 10 && v <= 45)) return;
     merkeTeig(r, { tt: v });
     renderDetail();
     renderArbeit();
   });
+  $('#detail-tt').addEventListener('change', () => {
+    const e = auftrag(detailId), r = e && rezeptFuer(e);
+    if (Zugang.istChef() && r) Zugang.log(`Teigtemperatur ${r.name}: ${nf1.format(teigEinstellung(r).tt)} °C`);
+  });
   $('#detail-tt').addEventListener('blur', () => { if (detailId) renderDetail(); });
   $('#detail-tt').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
   $('#detail-kneter').addEventListener('click', (ev) => {
+    if (!Zugang.istChef()) return;
     const b = ev.target.closest('[data-kneter]');
     const e = auftrag(detailId), r = e && rezeptFuer(e);
-    if (!b || !r) return;
+    if (!b || !r || teigEinstellung(r).kneter === b.dataset.kneter) return;
     merkeTeig(r, { kneter: b.dataset.kneter });
+    Zugang.log(`Kneter ${r.name}: ${b.dataset.kneter === 'hub' ? 'Hubkneter' : 'Spiralkneter'}`);
     renderDetail();
     renderArbeit();
   });
@@ -1689,13 +1638,7 @@ function start() {
   $('#schritt-x').addEventListener('click', schliesseOverlay);
 
   $('#einspielen').addEventListener('click', () => einspielen());
-  $('#verbinden').addEventListener('click', verbinden);
-  $('#uebernehmen').addEventListener('click', () => { const f = fremdeConfig(); if (f) einspielen({ apiKey: f.apiKey, lagerBin: f.lagerBin }); });
-  $('#trennen').addEventListener('click', () => {
-    if (!confirm('Verbindung auf diesem Gerät trennen? Die eingespielten Rezepte und die Arbeitsübersicht bleiben.')) return;
-    try { localStorage.removeItem(K.config); } catch (e) {}
-    renderEinst();
-  });
+  $('#abmelden').addEventListener('click', () => Zugang.abmelden());
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
@@ -1706,8 +1649,8 @@ function start() {
   renderTemps(true);
   renderAlles();
   zeigeTab('uebersicht');
-  // Grundstand von vor den Vorstufen-Rezepten: einmal von selbst neu einspielen
-  if (hatRezepte() && grund.version !== GRUNDSTAND_VERSION && (holeConfig() || fremdeConfig())) einspielen();
+  // Rezepte von selbst holen: neues Gerät, alter Grundstand oder älter als ein Tag (1 Zugriff)
+  if (!hatRezepte() || grund.version !== GRUNDSTAND_VERSION || Date.now() - (grund.eingespielt || 0) > 864e5) einspielen(true);
   window.__appGestartet = true;
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
