@@ -163,6 +163,7 @@
   .vs-knopf { display: block; margin: 6px 0 0 auto; font-size: 14px; font-weight: 750; color: #fff; background: var(--accent); border-radius: 9px; padding: 7px 10px; white-space: nowrap; }
   .vs-knopf:active { filter: brightness(.92); }
   .vs-zeile .pill { margin-top: 6px; }
+  .abzug-karte { border: 2px solid var(--wheat); background: #FFFCF4; }
 
   /* Temperaturen / Schüttwasser */
   .temp-karte { margin: 4px 0 14px; padding: 12px 14px; }
@@ -315,6 +316,7 @@
     </details>
     <button id="arbeit-neu" class="btn-zweit btn-breit">+ Rezept hinzufügen</button>
     <div id="arbeit-liste"></div>
+    <div id="abzug-box"></div>
     <div id="vorstufen"></div>
     <button id="erledigte-weg" class="btn-text" hidden>Erledigte entfernen</button>
   </section>
@@ -402,6 +404,18 @@
 </div>
 
 <!-- ===== Schritt für Schritt abwiegen ===== -->
+<!-- ===== Fertige Rezepte vom Lager abziehen ===== -->
+<div id="abzug" class="overlay" hidden>
+  <div class="overlay-kopf"><div class="eng">
+    <button class="kopf-btn" data-zurueck>‹ Zurück</button>
+    <div class="kopf-titel">Vom Lager abziehen</div>
+  </div></div>
+  <div class="overlay-inhalt"><div class="eng" id="abzug-inhalt"></div></div>
+  <div class="overlay-fuss"><div class="eng">
+    <button id="abzug-los" class="btn-primaer btn-gross">📦 Jetzt vom Lager abziehen</button>
+  </div></div>
+</div>
+
 <div id="schritt" class="overlay" hidden>
   <div class="overlay-kopf"><div class="eng">
     <button class="kopf-btn" id="schritt-x" aria-label="Schließen">✕</button>
@@ -423,7 +437,7 @@
 <script src="./zugang.js"></script>
 <script>
 'use strict';
-const APP_VERSION = '1.4 · 27.10.2026';
+const APP_VERSION = '1.5 · 28.10.2026';
 
 // Eigene Schlüssel im Gerätespeicher – die Lager-/Bestell-App liegen auf derselben Adresse,
 // darum alles mit "rezeptapp_" davor und NIE localStorage.clear().
@@ -707,7 +721,10 @@ let letzterTag = heuteISO();
 function aufraeumen() {
   const heute = heuteISO();
   const vorher = arbeit.length;
-  arbeit = arbeit.filter((e) => !(e.status === 'fertig' && e.datum < heute));
+  // Fertige Rezepte, die noch nicht vom Lager abgezogen sind, bleiben bis zu 7 Tage stehen (damit nichts verloren geht)
+  const woche = new Date(Date.now() - 7 * 864e5);
+  const grenze = `${woche.getFullYear()}-${String(woche.getMonth() + 1).padStart(2, '0')}-${String(woche.getDate()).padStart(2, '0')}`;
+  arbeit = arbeit.filter((e) => !(e.status === 'fertig' && e.datum < heute && (e.abgebucht || !mussAbgezogenWerden(e) || e.datum < grenze)));
   if (arbeit.length !== vorher) speichereArbeit();
   letzterTag = heute;
 }
@@ -1100,7 +1117,7 @@ function auftragHTML(e, heute) {
   const n = r ? r.zutaten.length : 0;
   const nSchritte = r ? schritteVon(e, r).length : 0;
   let status = '<span class="pfeil">›</span>';
-  if (e.status === 'fertig') status = `<span class="pill fertig">✓ ${e.fertigUm ? fmtUhr(e.fertigUm) : 'fertig'}</span>`;
+  if (e.status === 'fertig') status = `<span class="pill fertig">✓ ${e.fertigUm ? fmtUhr(e.fertigUm) : 'fertig'}${e.abgebucht ? ' · 📦' : ''}</span>`;
   else if (r && e.status === 'laeuft') status = `<span class="pill laeuft">Zutat ${Math.min(e.schritt, nSchritte - 1) + 1}/${nSchritte}</span>`;
   const alt = e.datum !== heute ? `<span class="pill alt">von ${esc(fmtTagKurz(e.datum))}</span>` : '';
   let meta = '<span class="warn-text">Rezept fehlt im Grundstand</span>';
@@ -1198,6 +1215,7 @@ function renderArbeit() {
       .concat([...fertig].sort((a, b) => (a.fertigUm || 0) - (b.fertigUm || 0)));
     liste.innerHTML = `<div class="liste" style="margin-top:14px">${sortiert.map((e) => auftragHTML(e, heute)).join('')}</div>`;
   }
+  $('#abzug-box').innerHTML = abzugKarteHTML();
   $('#vorstufen').innerHTML = vorstufenHTML();
   $('#erledigte-weg').hidden = !fertig.length;
   renderTemps(false);
@@ -1219,6 +1237,143 @@ function tempGeaendert() {
   renderArbeit();
   if (detailId) renderDetail();
   if (auswahlId) aktualisiereFaktor();
+}
+
+// ---------- Fertige Rezepte vom Lager abziehen ----------
+// Rechnet wie der Backzettel der Bestell-App: alle Zutaten der fertig abgewogenen Rezepte, Vorstufen (Sauerteig,
+// Kochstück …) in echte Rohstoffe aufgelöst. Gebucht wird direkt im Speicher der Lager-App: Bestand verringern +
+// Eintrag im Bestellverlauf der Lager-App (Reiter Bestellung – dort lässt sich die Abbuchung auch wieder zurücknehmen).
+// Vorstufen-Rezepte selbst werden nicht abgezogen – sie stecken schon in den Teigen.
+const mussAbgezogenWerden = (e) => { const r = rezeptFuer(e); return !(r && r.vorstufe); };
+const offeneAbzuege = () => arbeit.filter((e) => e.status === 'fertig' && !e.abgebucht && mussAbgezogenWerden(e));
+
+function abzugBerechnen(record, eintraege) {
+  const mats = new Map((record.materials || []).map((m) => [m.id, m]));
+  const recipes = record.recipes || [];
+  const bedarf = new Map();
+  const fehlt = [];
+  const rezepte = [];
+  const aufloesen = (materialId, menge, tiefe) => {
+    const m = mats.get(materialId);
+    if (m && m.vorteig && Array.isArray(m.vorteig.teile) && m.vorteig.teile.length && tiefe < 6) {
+      m.vorteig.teile.forEach((t) => aufloesen(t.materialId, menge * (Number(t.anteil) || 0), tiefe + 1));
+      return;
+    }
+    bedarf.set(materialId, (bedarf.get(materialId) || 0) + menge);
+  };
+  eintraege.forEach((e) => {
+    const lr = recipes.find((r) => String(r.id) === String(e.rezeptId)) ||
+      recipes.find((r) => String(r.name).trim().toLowerCase() === String(e.name).trim().toLowerCase());
+    if (!lr || !Array.isArray(lr.items)) { fehlt.push(e); return; }
+    const gesamt = lr.items.reduce((s, it) => s + (Number(it.menge) || 0) * einheitInG((mats.get(it.materialId) || {}).unit), 0);
+    if (!(gesamt > 0)) { fehlt.push(e); return; }
+    const f = (e.kg * 1000) / gesamt;
+    lr.items.forEach((it) => aufloesen(it.materialId, (Number(it.menge) || 0) * f, 0));
+    rezepte.push(e);
+  });
+  const items = [...bedarf.entries()]
+    .map(([materialId, menge]) => ({ materialId, needed: Math.round(menge * 10) / 10, mat: mats.get(materialId) }))
+    .filter((x) => x.mat && x.needed > 0)
+    .sort((a, b) => b.needed - a.needed);
+  const verwaist = [...bedarf.keys()].filter((id) => !mats.has(id)).length;
+  // Wurde heute schon ein Backzettel aus der Bestell-App abgebucht? Dann würde doppelt abgezogen.
+  const d = new Date();
+  const heuteText = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const backzettel = (record.orderHistory || []).filter((h) => /backzettel/i.test(h.label || '') &&
+    ((h.appliedAt && new Date(h.appliedAt).toDateString() === d.toDateString()) || String(h.label).includes(heuteText)));
+  return { items, rezepte, fehlt, verwaist, backzettel };
+}
+
+const lagerMengeText = (m, menge) => {
+  const u = (m && m.unit) || 'g';
+  if (u === 'g' && menge >= 1000) return `${nf2.format(menge / 1000)} kg`;
+  if (u === 'ml' && menge >= 1000) return `${nf2.format(menge / 1000)} l`;
+  return `${menge < 10 ? nf1.format(menge) : nf0.format(menge)} ${u}`;
+};
+
+function abzugKarteHTML() {
+  const offen = offeneAbzuege();
+  if (!offen.length) return '';
+  const alleFertig = arbeit.every((e) => e.status === 'fertig');
+  const namen = offen.map((e) => `${esc(rezeptFuer(e) ? rezeptFuer(e).name : e.name)} (${esc(mengeKurz(e))})`).join(', ');
+  return `<div class="karte abzug-karte">
+    <div class="karte-titel">📦 ${alleFertig ? 'Alles fertig – jetzt vom Lager abziehen?' : 'Fertige Rezepte vom Lager abziehen'}</div>
+    <p>${namen}</p>
+    <button class="${alleFertig ? 'btn-primaer' : 'btn-zweit'} btn-breit" data-aktion="abzug" style="margin-top:12px">${offen.length === 1 ? '1 Rezept' : `${offen.length} Rezepte`} vom Lager abziehen</button>
+  </div>`;
+}
+
+let abzugPlan = null;
+async function abzugVorbereiten() {
+  const eintraege = offeneAbzuege();
+  if (!eintraege.length) return;
+  $('#abzug-inhalt').innerHTML = '<p class="hinweis">Lagerdaten werden geholt …</p>';
+  $('#abzug-los').disabled = true;
+  zeigeOverlay($('#abzug'));
+  try {
+    const record = await ladeLagerDaten();
+    abzugPlan = { ids: eintraege.map((e) => e.id), ...abzugBerechnen(record, eintraege) };
+    const p = abzugPlan;
+    let h = `<h2 style="margin-top:4px">Vom Lager abziehen</h2>
+      <p class="hinweis">Für ${p.rezepte.length === 1 ? 'dieses Rezept' : `diese ${p.rezepte.length} Rezepte`} wird der Bestand in der Lager-App verringert. Sauerteig, Kochstück & Co. sind schon in Mehl und Wasser aufgelöst.</p>
+      <div class="karte"><div class="karte-titel">Rezepte</div>${p.rezepte.map((e) => `<div class="zutat"><span>${esc(rezeptFuer(e) ? rezeptFuer(e).name : e.name)}</span><b>${esc(mengeKurz(e))}</b></div>`).join('')}</div>
+      <div class="karte"><div class="karte-titel">Wird abgezogen (${p.items.length} Rohstoffe)</div>${p.items.map((i) => `<div class="zutat"><span>${esc(i.mat.name)}</span><b>− ${lagerMengeText(i.mat, i.needed)}</b></div>`).join('')}</div>`;
+    if (p.backzettel.length) h += `<div class="status-zeile warn">⚠️ Heute wurde schon ein Backzettel aus der Bestell-App abgebucht (${esc(p.backzettel[0].label)}). Wenn diese Rezepte darin enthalten sind, würde doppelt abgezogen.</div>`;
+    if (p.fehlt.length) h += `<div class="status-zeile warn">Nicht in der Lager-App gefunden – wird nicht abgezogen: ${p.fehlt.map((e) => esc(e.name)).join(', ')}</div>`;
+    if (p.verwaist) h += `<div class="status-zeile warn">${p.verwaist} Zutat(en) gibt es in der Lager-App nicht mehr – die werden übersprungen.</div>`;
+    h += '<p class="hinweis">Zurücknehmen geht in der Lager-App unter Bestellung → Bestellverlauf → „Rückgängig“.</p>';
+    $('#abzug-inhalt').innerHTML = h;
+    $('#abzug-los').disabled = !p.items.length;
+  } catch (err) {
+    $('#abzug-inhalt').innerHTML = `<div class="status-zeile warn">Die Lagerdaten konnten nicht geholt werden: ${esc(err.message)}</div>`;
+  }
+}
+
+let ziehtAb = false;
+async function abzugAusfuehren() {
+  if (!abzugPlan || ziehtAb) return;
+  ziehtAb = true;
+  const knopf = $('#abzug-los');
+  knopf.disabled = true;
+  knopf.textContent = 'Wird abgezogen …';
+  try {
+    const eintraege = arbeit.filter((e) => abzugPlan.ids.includes(e.id) && !e.abgebucht);
+    // Frisch holen und gleich zurückschreiben – so geht nichts verloren, was inzwischen am Lager geändert wurde
+    const record = await ladeLagerDaten();
+    const p = abzugBerechnen(record, eintraege);
+    if (!p.items.length) throw new Error('Es gibt nichts abzuziehen.');
+    const ab = new Map(p.items.map((i) => [i.materialId, i.needed]));
+    const datum = new Date().toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let namen = p.rezepte.map((e) => `${rezeptFuer(e) ? rezeptFuer(e).name : e.name} ${mengeKurz(e)}`).join(', ');
+    if (namen.length > 90) namen = namen.slice(0, 88) + ' …';
+    const verlauf = { id: 'rezeptapp-' + neueId(), appliedAt: new Date().toISOString(), label: `Abgewogen ${datum} (Rezept-App): ${namen}`, items: p.items.map((i) => ({ materialId: i.materialId, needed: i.needed })) };
+    const neu = {
+      ...record,
+      materials: (record.materials || []).map((m) => (ab.has(m.id) ? { ...m, stock: Math.round(((Number(m.stock) || 0) - ab.get(m.id)) * 1000) / 1000 } : m)),
+      orderHistory: [verlauf, ...(record.orderHistory || [])].slice(0, 50),
+      _stand: { zeit: new Date().toISOString(), geraet: 'rezept', art: 'Rezept-App' },
+    };
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(lagerBin())}`, {
+      method: 'PUT',
+      headers: { ...Zugang.kopf(true), ...(Zugang.istChef() ? {} : { 'X-Bin-Versioning': 'true' }) },
+      body: JSON.stringify(neu),
+    });
+    if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'Keine Berechtigung' : `Fehler ${res.status}`);
+    const jetzt = Date.now();
+    p.rezepte.forEach((e) => { e.abgebucht = verlauf.id; e.abgebuchtUm = jetzt; });
+    speichereArbeit();
+    Zugang.log(`Vom Lager abgezogen: ${namen} (${p.items.length} Rohstoffe)`);
+    abzugPlan = null;
+    schliesseOverlay();
+    renderArbeit();
+    zeigeToast(`✓ ${p.rezepte.length === 1 ? '1 Rezept' : `${p.rezepte.length} Rezepte`} vom Lager abgezogen`);
+  } catch (err) {
+    zeigeToast('Abziehen hat nicht geklappt: ' + err.message);
+  } finally {
+    ziehtAb = false;
+    knopf.textContent = '📦 Jetzt vom Lager abziehen';
+    knopf.disabled = false;
+  }
 }
 
 // ---------- Rezept aus der Arbeitsübersicht (mit Starten) ----------
@@ -1569,6 +1724,7 @@ async function start() {
     if (a === 'einspielen') einspielen();
     else if (a === 'zur-arbeit') { schliesseAlle(); zeigeTab('arbeit'); }
     else if (a === 'abmelden') Zugang.abmelden();
+    else if (a === 'abzug') abzugVorbereiten();
     else if (a === 'vorstufe-dazu') vorstufeDazu(akt.dataset.vs, parseFloat(akt.dataset.kg));
     else if (a === 'temperaturen') {
       schliesseAlle();
@@ -1639,6 +1795,7 @@ async function start() {
 
   $('#einspielen').addEventListener('click', () => einspielen());
   $('#abmelden').addEventListener('click', () => Zugang.abmelden());
+  $('#abzug-los').addEventListener('click', abzugAusfuehren);
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
